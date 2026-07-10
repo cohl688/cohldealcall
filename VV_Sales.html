@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#121212">
+    <title>維港灣畔 - 銷售報數系統</title>
+    <link rel="manifest" href="./manifest.json">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --main-color: #6a11cb; --main-glow: rgba(106, 17, 203, 0.4); --bg-color: #f4f6f9; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { margin: 0; padding: 15px; background: var(--bg-color); color: #333; -webkit-overflow-scrolling: touch; }
+        .container { background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); max-width: 850px; margin: 0 auto; overflow: hidden; border: 1px solid rgba(106, 17, 203, 0.3); }
+        .header { background: linear-gradient(135deg, #121212, #2a2a2a); color: #fff; padding: 20px; text-align: center; border-bottom: 4px solid var(--main-color); position: relative; }
+        .header h1 { margin: 0; font-size: 22px; color: #fff; }
+        .save-indicator { position: absolute; top: 15px; right: 20px; font-size: 11px; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 12px; color: #fff; }
+        .content { padding: 20px; }
+        .section-title { font-size: 16px; color: #121212; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
+        .section-title::before { content: ''; width: 4px; height: 16px; background: var(--main-color); margin-right: 10px; display: inline-block; }
+        
+        .card { background: #fff; border: 1px solid #eee; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s ease; }
+        
+        @keyframes pulse-highlight { 0% { background-color: #f3e5f5; border-color: var(--main-color); } 100% { background-color: transparent; border-color: #eee; } }
+        .bounce-alert { animation: pulse-highlight 1.5s ease-out; border: 2px solid var(--main-color) !important; box-shadow: 0 8px 25px var(--main-glow) !important; }
+
+        .id-mapping { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:15px; }
+        .id-mapping div { display: flex; align-items: center; gap: 5px; font-size: 13px; }
+        .id-mapping input { margin-top: 0; padding: 6px; font-size: 13px; }
+        .custom-new-id { animation: pulse-highlight 2s ease-out forwards; border: 1px dashed var(--main-color); border-radius: 6px; padding: 4px; }
+
+        select, input { padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; margin-top: 5px; }
+        textarea { width: 100%; height: 350px; padding: 15px; border: 1px solid #eee; border-radius: 6px; font-size: 15px; resize: vertical; background-color: #fafafa; }
+        .btn { background: var(--main-color); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px;}
+        .editor-row { border-bottom: 1px dashed #eee; padding-bottom: 15px; margin-bottom: 15px; background: #fafafa; padding: 15px; border-radius: 6px; }
+        
+        /* 檔案上傳區塊 */
+        .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .upload-box { border: 1px dashed #ccc; padding: 10px; border-radius: 6px; text-align: center; background: #fdfdfd; }
+        .upload-box label { font-size: 14px; font-weight: bold; color: var(--main-color); display: block; margin-bottom: 5px; }
+        .upload-box input { font-size: 12px; padding: 5px; border: none; background: transparent; }
+        .upload-box.has-data { border-color: #4CAF50; background: #e8f5e9; }
+        @media (max-width: 600px) { .upload-grid, .id-mapping { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>⛴️ 維港·灣畔 (Victoria Voyage)</h1>
+        <div class="save-indicator" id="save-ind">🟢 已準備</div>
+    </div>
+    <div class="content">
+        <!-- 證件對照設定 -->
+        <div class="card" id="settings-sec">
+            <div class="section-title" onclick="toggleMappingContainer()" style="cursor:pointer; margin-bottom:0;">
+                <div><span style="display:inline-block; width:4px; height:16px; background:var(--main-color); margin-right:10px;"></span>⚙️ 證件類別對照設定 (點擊展開)</div>
+                <span id="collapse-icon">▼</span>
+            </div>
+            <div class="id-mapping" id="mapping-container" style="display:none;"></div>
+        </div>
+
+        <div class="card">
+            <div class="section-title"><div><span style="display:inline-block; width:4px; height:16px; background:var(--main-color); margin-right:10px;"></span>1. 上傳各期數總表 (Excel)</div></div>
+            <div class="upload-grid">
+                <div class="upload-box" id="box-1A"><label>1A 期 (V1A)</label><input type="file" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event, '1A')"></div>
+                <div class="upload-box" id="box-1B"><label>1B 期 (V1B)</label><input type="file" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event, '1B')"></div>
+                <div class="upload-box" id="box-2A"><label>2A 期 (V2A) [預留]</label><input type="file" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event, '2A')"></div>
+                <div class="upload-box" id="box-2B"><label>2B 期 (V2B)</label><input type="file" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event, '2B')"></div>
+            </div>
+        </div>
+        
+        <div class="card" id="filter-sec" style="display:none;">
+            <label>合併合約日期 (全期數)：</label><select id="date-select" onchange="processData()"></select>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-top:10px;">
+                <div><label style="font-size:12px;">1A 現可售數</label><input type="number" id="avail-1A" value="25" onchange="processData()"></div>
+                <div><label style="font-size:12px;">1B 現可售數</label><input type="number" id="avail-1B" value="4" onchange="processData()"></div>
+                <div><label style="font-size:12px;">2B 現可售數</label><input type="number" id="avail-2B" value="1" onchange="processData()"></div>
+            </div>
+        </div>
+        
+        <div class="card" id="editor-sec" style="display:none;">
+            <div class="section-title"><div><span style="display:inline-block; width:4px; height:16px; background:var(--main-color); margin-right:10px;"></span>2. 當日單位微調</div></div>
+            <div id="editor-container"></div>
+        </div>
+        
+        <div id="output-sec" style="display:none;">
+            <div class="card"><div class="section-title">格仔一：當日明細</div><button class="btn" onclick="copy('out1')">複製</button><textarea id="out1" readonly></textarea></div>
+            <div class="card"><div class="section-title">格仔二：銷情數據</div><button class="btn" onclick="copy('out2')">複製</button><textarea id="out2" style="height: 480px;" readonly></textarea></div>
+            <div class="card"><div class="section-title">格仔三：代理速報</div><button class="btn" onclick="copy('out3')">複製</button><textarea id="out3" style="height: 250px;" readonly></textarea></div>
+        </div>
+    </div>
+</div>
+<script>
+    if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+
+    // 核心資料庫 (儲存所有期數資料)
+    let vvData = { "1A": [], "1B": [], "2A": [], "2B": [] };
+    let savedSettings = {};
+    const TOTAL_UNITS = 2060;
+
+    // 各期數欄位對應表 (0-indexed)
+    // 1A: W(22)=Type, X(23)Y(24)Z(25)=Unit, AA(26)=Layout, AB(27)=Amt, AC(28)=Area, AD(29)=PSF, AE(30)=Pay, AQ(42)=Agency, AT(45)=Branch
+    // 1B: AC(28)=Type, AD(29)AE(30)AF(31)=Unit, AG(32)=Layout, AH(33)=Amt, AI(34)=Area, AJ(35)=PSF, AK(36)=Pay, AW(48)=Agency, AZ(51)=Branch
+    // 2B: Q(16)=Type, R(17)S(18)T(19)=Unit, U(20)=Layout, V(21)=Amt, W(22)=Area, X(23)=PSF, Y(24)=Pay, AK(36)=Agency, AN(39)=Branch
+    // 2A: 預設複製 2B 結構，未來可調
+    const PHASE_CONF = {
+        "1A": { dt:1, id:5, type:22, tow:23, flr:24, flt:25, lay:26, amt:27, area:28, psf:29, pay:30, ag:42, br:45, tot:635 },
+        "1B": { dt:1, id:5, type:28, tow:29, flr:30, flt:31, lay:32, amt:33, area:34, psf:35, pay:36, ag:48, br:51, tot:511 },
+        "2A": { dt:1, id:5, type:16, tow:17, flr:18, flt:19, lay:20, amt:21, area:22, psf:23, pay:24, ag:36, br:39, tot:405 },
+        "2B": { dt:1, id:5, type:16, tow:17, flr:18, flt:19, lay:20, amt:21, area:22, psf:23, pay:24, ag:36, br:39, tot:509 }
+    };
+
+    const defaultIDMappings = {
+        "香港居民身份證": "香港居民-非永居",
+        "香港永久性居民身份證": "香港居民-永居",
+        "香港商業登記證": "公司 - 香港商業登記證",
+        "中華民國護照": "中國內地",
+        "中華人民共和國居民身份證": "中國內地",
+        "中華人民共和國護照": "中國內地",
+        "澳門特別行政區永久性居民身份證": "澳門-永居",
+        "美國護照": "其他 - 境外人士",
+        "BVI公司": "公司 - BVI"
+    };
+    let idMappings = {...defaultIDMappings};
+    let freshlyDiscoveredKeys = new Set();
+
+    window.onload = () => {
+        let storedData = localStorage.getItem('vv_allData');
+        if (storedData) vvData = JSON.parse(storedData);
+        
+        let storedMappings = localStorage.getItem('vv_idMappings');
+        if (storedMappings) idMappings = JSON.parse(storedMappings);
+        else idMappings = {...defaultIDMappings};
+        renderIDMappings();
+
+        savedSettings = JSON.parse(localStorage.getItem('vv_settings') || '{}');
+        document.getElementById('avail-1A').value = localStorage.getItem('vv_avail1A') || 25;
+        document.getElementById('avail-1B').value = localStorage.getItem('vv_avail1B') || 4;
+        document.getElementById('avail-2B').value = localStorage.getItem('vv_avail2B') || 1;
+        
+        updateUploadBoxUI();
+        popDates();
+    };
+
+    function save() {
+        localStorage.setItem('vv_allData', JSON.stringify(vvData));
+        localStorage.setItem('vv_settings', JSON.stringify(savedSettings));
+        localStorage.setItem('vv_avail1A', document.getElementById('avail-1A').value);
+        localStorage.setItem('vv_avail1B', document.getElementById('avail-1B').value);
+        localStorage.setItem('vv_avail2B', document.getElementById('avail-2B').value);
+        localStorage.setItem('vv_date', document.getElementById('date-select').value);
+        localStorage.setItem('vv_idMappings', JSON.stringify(idMappings));
+        
+        document.getElementById('save-ind').innerText = "🟢 已儲存"; 
+        setTimeout(()=>document.getElementById('save-ind').innerText="🟢 已準備", 2000);
+    }
+
+    function renderIDMappings() {
+        const container = document.getElementById('mapping-container');
+        container.innerHTML = '';
+        Object.keys(idMappings).forEach(key => {
+            const isFresh = freshlyDiscoveredKeys.has(key);
+            const div = document.createElement('div');
+            if (isFresh) div.className = 'custom-new-id';
+            div.innerHTML = `<input type="text" value="${key}" readonly style="background:#eee; color:#555;" title="${key}"> <span>➔</span> <input type="text" value="${idMappings[key]}" onchange="updateSingleMapping('${key}', this.value)">`;
+            container.appendChild(div);
+        });
+    }
+
+    function updateSingleMapping(key, val) { idMappings[key] = val.trim(); save(); processData(); }
+    
+    function toggleMappingContainer() {
+        const container = document.getElementById('mapping-container');
+        const icon = document.getElementById('collapse-icon');
+        if(container.style.display === 'none') { container.style.display = 'grid'; icon.innerText = '▲'; } 
+        else { container.style.display = 'none'; icon.innerText = '▼'; }
+    }
+
+    function handleFileUpload(e, phase) {
+        let reader = new FileReader();
+        reader.onload = ev => {
+            let json = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(ev.target.result), {type: 'array'}).Sheets[XLSX.read(new Uint8Array(ev.target.result), {type: 'array'}).SheetNames[0]], {header: 1, defval: ""});
+            let parsedRows = [];
+            freshlyDiscoveredKeys.clear();
+            let hasNewKey = false;
+            let c = PHASE_CONF[phase];
+
+            for(let i=1; i<json.length; i++) {
+                if(!json[i][1] || String(json[i][1]).includes("累售")) break;
+                
+                let rawID = String(json[i][c.id] || "").trim();
+                if(rawID && !idMappings.hasOwnProperty(rawID)) {
+                    let dVal = "香港居民-非永居";
+                    if(rawID.includes("永居")) dVal = "香港居民-永居";
+                    else if(rawID.includes("公司")) dVal = "公司 - 香港商業登記證";
+                    else if(rawID.includes("內地") || rawID.includes("中國")) dVal = "中國內地";
+                    else if(rawID.includes("澳門")) dVal = "澳門-永居";
+                    idMappings[rawID] = dVal;
+                    freshlyDiscoveredKeys.add(rawID);
+                    hasNewKey = true;
+                }
+
+                // 只保留所需欄位
+                let minRow = [];
+                [c.dt, c.id, c.type, c.tow, c.flr, c.flt, c.lay, c.amt, c.area, c.psf, c.pay, c.ag, c.br].forEach(idx => minRow[idx] = json[i][idx]);
+                parsedRows.push(minRow);
+            }
+
+            vvData[phase] = parsedRows;
+            
+            if(hasNewKey) {
+                renderIDMappings();
+                document.getElementById('settings-sec').classList.add('bounce-alert');
+                document.getElementById('mapping-container').style.display = 'grid';
+                document.getElementById('collapse-icon').innerText = '▲';
+                setTimeout(() => document.getElementById('settings-sec').classList.remove('bounce-alert'), 1500);
+            }
+            updateUploadBoxUI();
+            popDates();
+            save();
+        };
+        reader.readAsArrayBuffer(e.target.files[0]);
+    }
+
+    function updateUploadBoxUI() {
+        ['1A', '1B', '2A', '2B'].forEach(p => {
+            let box = document.getElementById(`box-${p}`);
+            if(vvData[p] && vvData[p].length > 0) {
+                box.classList.add('has-data');
+                box.querySelector('label').innerText = `${p} 期 (已載入 ${vvData[p].length} 筆)`;
+            }
+        });
+    }
+
+    function parseDate(v) {
+        if(typeof v === 'number') return new Date(Math.round((v-25569)*86400*1000)).toISOString().split('T')[0];
+        let p = String(v).split(/[-/]/);
+        if(p.length===3) return p[2].length===4 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}` : `${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
+        return v;
+    }
+
+    // 將所有期數的紀錄展平
+    function getAllRecords() {
+        let all = [];
+        Object.keys(vvData).forEach(p => {
+            vvData[p].forEach(r => {
+                let rec = { phase: p, raw: r, pDate: parseDate(r[PHASE_CONF[p].dt]) };
+                if (rec.pDate) all.push(rec);
+            });
+        });
+        return all;
+    }
+
+    function popDates() {
+        let allRecs = getAllRecords();
+        let s = new Set();
+        allRecs.forEach(r => s.add(r.pDate));
+        
+        let sel = document.getElementById('date-select'); sel.innerHTML = "";
+        Array.from(s).sort().reverse().forEach(d => sel.add(new Option(d, d)));
+        let sd = localStorage.getItem('vv_date'); if(sd && s.has(sd)) sel.value = sd;
+        
+        if (allRecs.length > 0) document.getElementById('filter-sec').style.display = 'block';
+        processData();
+    }
+
+    function getIDStr(rawID) {
+        let text = String(rawID || "").trim();
+        if(idMappings[text]) return idMappings[text];
+        if(text.includes("永久")) return "香港居民-永居";
+        if(text.includes("公司")) return "公司 - 香港商業登記證";
+        if(text.includes("內地")) return "中國內地";
+        if(text.includes("澳門")) return "澳門-永居";
+        return "香港居民-非永居";
+    }
+
+    function agInfo(n) {
+        n=String(n); if(n.includes("中原")) return{n:"中原",h:"❤️"}; if(n.includes("美聯")) return{n:"美聯",h:"💛"};
+        if(n.includes("利嘉閣")) return{n:"利嘉閣",h:"💙"}; if(n.includes("港置")||n.includes("置業")) return{n:"港置",h:"💚"};
+        if(n.includes("世紀")||n.includes("21")) return{n:"世紀21",h:"🖤"}; if(n.includes("總會")) return{n:"總會",h:"💜"};
+        if(n.includes("商會")) return{n:"香港(國際)地產商會",h:"🤍"}; if(n.includes("潤東")) return{n:"潤東置業（香港）有限公司",h:"🧡"};
+        if(n.includes("搜房")) return{n:"搜房 (香港) 集團有限公司",h:"🤎"}; return {n:n||"其他",h:"🤍"};
+    }
+
+    // 判斷價單 (>0) vs 招標 (==0)
+    function getSaleType(val) {
+        if (!val || String(val).trim() === '' || String(val).trim() === '0') return '招標';
+        let num = parseFloat(String(val).replace(/,/g, ''));
+        if (!isNaN(num) && num > 0) return '價單';
+        return '招標';
+    }
+
+    function updateSet(u, k, v) { if(!savedSettings[u]) savedSettings[u]={}; savedSettings[u][k]=v; gen(); }
+
+    function processData() {
+        let d = document.getElementById('date-select').value; if(!d) return;
+        let allRecs = getAllRecords();
+        let currentDeals = allRecs.filter(r => r.pDate === d);
+        let h = "";
+        
+        let idOptions = [...new Set(Object.values(idMappings))];
+
+        currentDeals.forEach((rObj, i) => {
+            let p = rObj.phase;
+            let c = PHASE_CONF[p];
+            let r = rObj.raw;
+            let tow = String(r[c.tow] || "").replace(/Tower [1-5][ABC] of Tower [1-5]/g, m=>m.substring(0,8).replace("Tower ","T")).replace("Tower ","T").trim();
+            let u = `${tow}-${r[c.flr]||''}${r[c.flt]||''}`;
+            let s = savedSettings[u] || { m: "NotSet", id: getIDStr(r[c.id]), us: "自住" };
+            
+            // 如果未微調過，預設使用 Excel 判斷的價單/招標
+            let defaultMethod = getSaleType(r[c.type]);
+            let finalMethod = s.m === "NotSet" ? defaultMethod : s.m;
+
+            let idOptHtml = idOptions.map(opt => `<option value="${opt}" ${s.id===opt?'selected':''}>${opt}</option>`).join('');
+
+            h += `<div class="editor-row">
+            <b style="color:var(--main-color); font-size:16px;">${p}期: ${u}</b><br>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:8px;">
+                <div><label style="font-size:12px;">售賣:</label> <select onchange="updateSet('${u}','m',this.value)"><option value="招標" ${finalMethod==='招標'?'selected':''}>招標</option><option value="價單" ${finalMethod==='價單'?'selected':''}>價單</option></select></div>
+                <div><label style="font-size:12px;">身份:</label> <select onchange="updateSet('${u}','id',this.value)">${idOptHtml}</select></div>
+                <div><label style="font-size:12px;">用途:</label> <select onchange="updateSet('${u}','us',this.value)"><option value="自住" ${s.us==='自住'?'selected':''}>自住</option><option value="投資" ${s.us==='投資'?'selected':''}>投資</option></select></div>
+            </div></div>`;
+        });
+        document.getElementById('editor-container').innerHTML = h;
+        document.getElementById('editor-sec').style.display = currentDeals.length ? 'block' : 'none';
+        gen();
+    }
+
+    function gen() {
+        let sd = document.getElementById('date-select').value; if(!sd) return;
+        let dobj = new Date(sd), w = isNaN(dobj)?"日":["日","一","二","三","四","五","六"][dobj.getDay()];
+        
+        let allRecs = getAllRecords();
+        let currentDeals = allRecs.filter(r => r.pDate === sd);
+        
+        let st = {
+            tC:0, tA:0, tS:0, 
+            y26P_c:0, y26P_a:0, y26P_s:0, y26T_c:0, y26T_a:0, y26T_s:0,
+            y25P_c:0, y25P_a:0, y25P_s:0, y25T_c:0, y25T_a:0, y25T_s:0,
+            p1A_c:0, p1B_c:0, p2B_c:0
+        };
+        
+        allRecs.forEach(rObj => {
+            let p = rObj.phase; let c = PHASE_CONF[p]; let r = rObj.raw;
+            let yr = rObj.pDate ? rObj.pDate.substring(0,4) : "";
+            let a = parseFloat(String(r[c.amt]).replace(/,/g,''))||0;
+            let s = parseFloat(String(r[c.area]).replace(/,/g,''))||0;
+            let isPriceList = getSaleType(r[c.type]) === '價單';
+
+            st.tC++; st.tA+=a; st.tS+=s;
+            if (p === '1A') st.p1A_c++;
+            if (p === '1B') st.p1B_c++;
+            if (p === '2B') st.p2B_c++;
+
+            if (yr === '2026') {
+                if (isPriceList) { st.y26P_c++; st.y26P_a+=a; st.y26P_s+=s; } 
+                else { st.y26T_c++; st.y26T_a+=a; st.y26T_s+=s; }
+            }
+            if (yr === '2025') {
+                if (isPriceList) { st.y25P_c++; st.y25P_a+=a; st.y25P_s+=s; } 
+                else { st.y25T_c++; st.y25T_a+=a; st.y25T_s+=s; }
+            }
+        });
+
+        let shortD = parseInt(sd.split('-')[2]) + '/' + parseInt(sd.split('-')[1]) + '/' + sd.split('-')[0];
+        let shortD_Msg3 = parseInt(sd.split('-')[2]) + '/' + parseInt(sd.split('-')[1]);
+        
+        // 【格仔一】
+        let m1 = `維港·灣畔 開單 (${shortD}) (${w})\n\n`;
+        let agG = {};
+        let emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
+        
+        currentDeals.forEach((rObj, i) => {
+            let p = rObj.phase; let c = PHASE_CONF[p]; let r = rObj.raw;
+            let tow = String(r[c.tow] || "").replace(/Tower [1-5][ABC] of Tower [1-5]/g, m=>m.substring(0,8).replace("Tower ","T")).replace("Tower ","T").trim();
+            let u = `${tow}-${r[c.flr]||''}${r[c.flt]||''}`;
+            let s = savedSettings[u] || { m: "NotSet", id: getIDStr(r[c.id]), us: "自住" };
+            let finalMethod = s.m === "NotSet" ? getSaleType(r[c.type]) : s.m;
+
+            let sq = parseFloat(String(r[c.area]).replace(/,/g,''))||0;
+            let ps = parseFloat(String(r[c.psf]).replace(/,/g,''))||0;
+            let am = parseFloat(String(r[c.amt]).replace(/,/g,''))||0;
+            let pay = String(r[c.pay] || "").trim();
+            let ag = agInfo(r[c.ag]);
+            let branch = String(r[c.br] || "").trim();
+            let layout = String(r[c.lay] || "").trim();
+            let emo = i < emojis.length ? emojis[i] : `${i+1}️⃣`;
+            
+            m1 += `${emo}  ${u} （${finalMethod}）\n實呎 ${sq}' @$${ps.toLocaleString('en-US')}\n戶型：${layout}(${s.id})(${s.us})\n金額：$${am.toLocaleString('en-US')}\n付款：${pay}\n代理：${ag.n.includes('置業')?'港置':ag.n}-${branch}\n\n`;
+            
+            if(!agG[ag.n]) agG[ag.n] = {h:ag.h, c:0, d:[]};
+            agG[ag.n].c++; agG[ag.n].d.push(`${u} ${branch} ${sq}' (${layout})`); 
+        });
+
+        // 【格仔二】
+        let m2 = `維港•灣畔是日累售：${currentDeals.length}伙\n\n`;
+        m2 += `2026年累售：\n價單：${st.y26P_c}伙\n合約額： $${(st.y26P_a/100000000).toFixed(2)}億 (@$${st.y26P_s>0?Math.round(st.y26P_a/st.y26P_s).toLocaleString('en-US'):0})\n\n`;
+        m2 += `招標：${st.y26T_c}伙\n合約額： $${(st.y26T_a/100000000).toFixed(2)}億 (@$${st.y26T_s>0?Math.round(st.y26T_a/st.y26T_s).toLocaleString('en-US'):0})\n\n`;
+        
+        m2 += `2025年累售：\n${st.y25P_c} 伙 (價單)\n合約額 $${(st.y25P_a/100000000).toFixed(2)} 億 (@$${st.y25P_s>0?Math.round(st.y25P_a/st.y25P_s).toLocaleString('en-US'):0})\n\n`;
+        m2 += `${st.y25T_c} 伙 (招標)\n合約額 $${(st.y25T_a/100000000).toFixed(2)} 億 (@$${st.y25T_s>0?Math.round(st.y25T_a/st.y25T_s).toLocaleString('en-US'):0})\n\n`;
+        
+        let t_yyyy = sd.split('-')[0], t_mm = parseInt(sd.split('-')[1]), t_dd = parseInt(sd.split('-')[2]);
+        m2 += `直至 ${t_yyyy} 年 ${t_mm} 月 ${t_dd} 日總售出： ${st.tC} 伙（佔全盤 ${((st.tC/TOTAL_UNITS)*100).toFixed(1)}%）；\n`;
+        m2 += `總合約額： $${(st.tA/100000000).toFixed(2)}億 (@$${st.tS>0?Math.round(st.tA/st.tS).toLocaleString('en-US'):0})\n\n`;
+        
+        let avail1A = document.getElementById('avail-1A').value;
+        let avail1B = document.getElementById('avail-1B').value;
+        let avail2B = document.getElementById('avail-2B').value;
+        
+        m2 += `1A期總累售（佔總伙數％）：${st.p1A_c}伙（${((st.p1A_c/PHASE_CONF['1A'].tot)*100).toFixed(1)}%）\n1A期總單位數：${PHASE_CONF['1A'].tot}伙\n1A期現可供出售單位數：${avail1A}伙\n\n`;
+        m2 += `1B期總累售（佔總伙數％）：${st.p1B_c}伙（${((st.p1B_c/PHASE_CONF['1B'].tot)*100).toFixed(1)}%）\n1B期總單位數：${PHASE_CONF['1B'].tot}伙\n1B期現可供出售單位數：${avail1B}伙\n\n`;
+        m2 += `2B期總累售（佔總伙數％）：${st.p2B_c}伙（${((st.p2B_c/PHASE_CONF['2B'].tot)*100).toFixed(1)}%）\n2B期總單位數：${PHASE_CONF['2B'].tot}伙\n2B期現可供出售單位數：${avail2B}伙`;
+
+        // 【格仔三】
+        let tEmo = currentDeals.length <= 10 && currentDeals.length > 0 ? emojis[currentDeals.length-1] : currentDeals.length;
+        let m3 = `${shortD_Msg3} (${w}) ⛴️維港·灣畔⛴️\n暫成交${tEmo}宗:\n`;
+        
+        let ord = ["中原","美聯","利嘉閣","港置","世紀21","總會","香港(國際)地產商會","潤東置業（香港）有限公司","搜房 (香港) 集團有限公司"];
+        Object.keys(agG).sort((a,b)=>{ let x=ord.indexOf(a),y=ord.indexOf(b); return (x===-1?99:x)-(y===-1?99:y); }).forEach(k => {
+            m3 += `\n${agG[k].h} ${k}：${agG[k].c}\n`;
+            agG[k].d.forEach(d_str => {
+                let parts = d_str.split(' '); 
+                m3 += `${parts[1]} ${parts[0]} ${parts[2]} ${parts[3]}\n`; 
+            });
+        });
+
+        document.getElementById('out1').value = m1.trim(); document.getElementById('out2').value = m2.trim(); document.getElementById('out3').value = m3.trim();
+        document.getElementById('output-sec').style.display = 'block';
+        save();
+    }
+
+    function copy(id) { document.getElementById(id).select(); document.execCommand('copy'); alert('✅ 已複製！'); }
+</script>
+</body>
+</html>
