@@ -9,8 +9,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --coli-blue: #002E5D; --coli-gold: #D4AF37; --bg-color: #f4f6f9; }
-        * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
-        body { margin: 0; padding: 15px; background: var(--bg-color); color: #333; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { margin: 0; padding: 15px; background: var(--bg-color); color: #333; -webkit-overflow-scrolling: touch; }
         .container { background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,46,93,0.1); max-width: 850px; margin: 0 auto; overflow: hidden; border: 1px solid rgba(212,175,55,0.3); }
         .header { background: linear-gradient(135deg, var(--coli-blue), #004b99); color: #fff; padding: 20px; text-align: center; border-bottom: 4px solid var(--coli-gold); position: relative; }
         .header h1 { margin: 0; font-size: 22px; }
@@ -18,11 +18,43 @@
         .content { padding: 20px; }
         .section-title { font-size: 16px; color: var(--coli-blue); font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; }
         .section-title::before { content: ''; width: 4px; height: 16px; background: var(--coli-gold); margin-right: 10px; }
-        .card { background: #fff; border: 1px solid #eee; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        
+        /* 證件卡片 & 跳動高亮動畫 */
+        .card { background: #fff; border: 1px solid #eee; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s ease; }
+        
+        @keyframes subtle-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        @keyframes pulse-highlight {
+            0% { background-color: #fffde7; border-color: var(--coli-gold); }
+            100% { background-color: transparent; border-color: #eee; }
+        }
+        
+        .bounce-alert {
+            animation: subtle-bounce 0.5s ease 3;
+            border: 2px solid var(--coli-gold) !important;
+            background-color: #fffde7 !important;
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.2) !important;
+        }
+
+        .id-mapping { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .id-mapping div { display: flex; align-items: center; gap: 5px; font-size: 13px; transition: all 0.5s ease; }
+        .id-mapping input { margin-top: 0; padding: 6px; font-size: 13px; }
+        
+        /* 全新感應出的項目閃爍提示 */
+        .custom-new-id {
+            animation: pulse-highlight 2s ease-out forwards;
+            border: 1px dashed var(--coli-gold);
+            border-radius: 6px;
+            padding: 4px;
+        }
+
         select, input { padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; margin-top: 5px; }
-        textarea { width: 100%; height: 300px; padding: 15px; border: 1px solid #eee; border-radius: 6px; font-size: 15px; resize: vertical; }
+        textarea { width: 100%; height: 320px; padding: 15px; border: 1px solid #eee; border-radius: 6px; font-size: 15px; resize: vertical; background-color: #fafafa; }
         .btn { background: var(--coli-blue); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px;}
         .editor-row { border-bottom: 1px dashed #eee; padding-bottom: 15px; margin-bottom: 15px; }
+        @media (max-width: 600px) { .id-mapping { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -32,18 +64,32 @@
         <div class="save-indicator" id="save-ind">🟢 已準備</div>
     </div>
     <div class="content">
+        <!-- 證件對照設定 -->
+        <div class="card" id="settings-sec">
+            <div class="section-title" onclick="toggleMappingContainer()" style="cursor:pointer; margin-bottom:0; justify-content: space-between;">
+                <span>⚙️ 證件類別對照設定 (點擊展開/收起)</span>
+                <span id="collapse-icon">▼</span>
+            </div>
+            <div class="id-mapping" id="mapping-container" style="display:none; margin-top:15px;">
+                <!-- 這裡會由 JS 動態生成所有內置與 Excel 內感應到的新身份類別 -->
+            </div>
+        </div>
+
         <div class="card">
             <div class="section-title">1. 上傳總表 (Excel)</div>
             <input type="file" id="excel-file" accept=".xlsx, .xls, .csv">
         </div>
+        
         <div class="card" id="filter-sec" style="display:none;">
-            <label>合約日期：</label><select id="date-select" onchange="processData()"></select>
+            <label>合約日期 (B欄)：</label><select id="date-select" onchange="processData()"></select>
             <label style="margin-top:10px;display:block;">現可供出售數：</label><input type="number" id="input-available" value="21" onchange="processData()">
         </div>
+        
         <div class="card" id="editor-sec" style="display:none;">
             <div class="section-title">2. 單位微調</div>
             <div id="editor-container"></div>
         </div>
+        
         <div id="output-sec" style="display:none;">
             <div class="card"><div class="section-title">格仔一：當日明細</div><button class="btn" onclick="copy('out1')">複製</button><textarea id="out1" readonly></textarea></div>
             <div class="card"><div class="section-title">格仔二：銷情數據</div><button class="btn" onclick="copy('out2')">複製</button><textarea id="out2" readonly></textarea></div>
@@ -56,8 +102,30 @@
     let allDeals = [], currentDeals = [], savedSettings = {};
     const TOTAL = 702;
 
+    // 系統原生證件類別對應表
+    const defaultIDMappings = {
+        "香港居民身份證": "香港居民-非永居",
+        "香港永久性居民身份證": "香港居民-永居",
+        "香港商業登記證": "香港商業登記證",
+        "中華人民共和國居民身份證": "中國內地",
+        "中華人民共和國護照": "中國內地",
+        "澳門特別行政區永久性居民": "澳門-永居"
+    };
+    let idMappings = {...defaultIDMappings};
+    let freshlyDiscoveredKeys = new Set(); // 記錄當次運行時新感應出的證件，用於高亮顯示
+
     window.onload = () => {
         let stored = localStorage.getItem('vd_allDeals');
+        
+        // 載入自訂與自動感應記錄的 IDMappings
+        let storedMappings = localStorage.getItem('vd_idMappings');
+        if(storedMappings) {
+            idMappings = JSON.parse(storedMappings);
+        } else {
+            idMappings = {...defaultIDMappings};
+        }
+        renderIDMappings();
+
         if(stored) {
             allDeals = JSON.parse(stored);
             savedSettings = JSON.parse(localStorage.getItem('vd_settings') || '{}');
@@ -71,7 +139,67 @@
         localStorage.setItem('vd_settings', JSON.stringify(savedSettings));
         localStorage.setItem('vd_avail', document.getElementById('input-available').value);
         localStorage.setItem('vd_date', document.getElementById('date-select').value);
+        localStorage.setItem('vd_idMappings', JSON.stringify(idMappings));
+        
         document.getElementById('save-ind').innerText = "🟢 已儲存"; setTimeout(()=>document.getElementById('save-ind').innerText="🟢 已準備",2000);
+    }
+
+    // 渲染對照設定區域 (UI 繪製)
+    function renderIDMappings() {
+        const container = document.getElementById('mapping-container');
+        container.innerHTML = '';
+        
+        Object.keys(idMappings).forEach(key => {
+            const isFresh = freshlyDiscoveredKeys.has(key);
+            
+            const div = document.createElement('div');
+            if (isFresh) {
+                div.className = 'custom-new-id';
+            }
+            div.innerHTML = `
+                <input type="text" value="${key}" readonly style="background:#eee; color:#555;" title="${key}"> 
+                <span>➔</span> 
+                <input type="text" value="${idMappings[key]}" onchange="updateSingleMapping('${key}', this.value)">
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function updateSingleMapping(key, val) {
+        idMappings[key] = val.trim();
+        save();
+        processData();
+    }
+
+    function toggleMappingContainer() {
+        const container = document.getElementById('mapping-container');
+        const icon = document.getElementById('collapse-icon');
+        if(container.style.display === 'none') {
+            container.style.display = 'grid';
+            icon.innerText = '▲';
+        } else {
+            container.style.display = 'none';
+            icon.innerText = '▼';
+        }
+    }
+
+    // 當發現新證件類別時，觸發「跳動」及「高亮」警告
+    function triggerBounceWarning() {
+        const settingsSec = document.getElementById('settings-sec');
+        const container = document.getElementById('mapping-container');
+        const icon = document.getElementById('collapse-icon');
+        
+        // 自動強制展開對照設定面板
+        container.style.display = 'grid';
+        icon.innerText = '▲';
+        
+        // 賦予跳動及閃爍 Class
+        settingsSec.classList.add('bounce-alert');
+        
+        // 動畫結束後移除動畫 Class 以便下次重啟，但保留展開狀態
+        setTimeout(() => {
+            settingsSec.classList.remove('bounce-alert');
+        }, 1500);
     }
 
     document.getElementById('excel-file').addEventListener('change', e => {
@@ -79,9 +207,37 @@
         reader.onload = e => {
             let json = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).SheetNames[0]], {header: 1, defval: ""});
             allDeals = [];
+            freshlyDiscoveredKeys.clear();
+            let hasNewKey = false;
+
             for(let i=1; i<json.length; i++) {
                 if(!json[i][1] || String(json[i][1]).includes("累售")) break;
-                allDeals.push(json[i]);
+                
+                // 讀取 Excel 中的證件類別（F欄 - Index 5）
+                let rawID = String(json[i][5] || "").trim();
+                if(rawID && !idMappings.hasOwnProperty(rawID)) {
+                    // 自動賦予合理的智慧化預設值
+                    let defaultVal = "香港居民-非永居";
+                    if(rawID.includes("永居") || rawID.includes("永久")) defaultVal = "香港居民-永居";
+                    else if(rawID.includes("商業") || rawID.includes("公司")) defaultVal = "香港商業登記證";
+                    else if(rawID.includes("內地") || rawID.includes("中國") || rawID.includes("護照")) defaultVal = "中國內地";
+                    else if(rawID.includes("澳門")) defaultVal = "澳門-永居";
+                    
+                    idMappings[rawID] = defaultVal;
+                    freshlyDiscoveredKeys.add(rawID);
+                    hasNewKey = true;
+                }
+
+                // 儲存欄位：B=1, F=5, X=23, Y=24, Z=25, AA=26, AB=27, AC=28, AD=29, AE=30, AQ=42, AT=45, AW=48
+                let minRow = [];
+                [1, 5, 23, 24, 25, 26, 27, 28, 29, 30, 42, 45, 48].forEach(idx => minRow[idx] = json[i][idx]);
+                allDeals.push(minRow);
+            }
+
+            if(hasNewKey) {
+                renderIDMappings();
+                triggerBounceWarning();
+                save(); // 立刻本機備存新對應
             }
             popDates();
         };
@@ -105,10 +261,18 @@
         processData();
     }
 
-    function parseID(id) {
-        if(!id) return "香港居民-非永居"; if(id.includes("永居")||id.includes("永久")) return "香港居民-永居";
-        if(id.includes("公司")||id.includes("商業")) return "香港商業登記證"; if(id.includes("中國")) return "中國內地";
-        if(id.includes("澳門")) return "澳門-永居"; return "香港居民-非永居";
+    // 智能對照主程序：精確配對最新對照設定
+    function getIDStr(rawID) {
+        let text = String(rawID || "").trim();
+        if(idMappings[text]) {
+            return idMappings[text];
+        }
+        if(text.includes("香港永久")) return "香港居民-永居";
+        if(text.includes("香港居民")) return "香港居民-非永居";
+        if(text.includes("商業")) return "香港商業登記證";
+        if(text.includes("人民共和國")) return "中國內地";
+        if(text.includes("澳門")) return "澳門-永居";
+        return "香港居民-非永居";
     }
 
     function agInfo(n) {
@@ -125,12 +289,19 @@
         let d = document.getElementById('date-select').value; if(!d) return;
         currentDeals = allDeals.filter(r => r.pDate === d);
         let h = "";
+        
+        // 匯集目前對照表內設定的所有輸出身份 (去重)
+        let idOptions = [...new Set(Object.values(idMappings))];
+
         currentDeals.forEach((r, i) => {
-            let u = `${String(r[5]).replace("Tower ","T").trim()}-${r[6]}${r[7]}`;
-            let s = savedSettings[u] || {m:"招標", id:parseID(r[2]), us:"自住"};
+            let u = `${String(r[23]).replace("Tower ","T").trim()}-${r[24]}${r[25]}`;
+            let s = savedSettings[u] || {m:"招標", id:getIDStr(r[5]), us:"自住"};
+            
+            let idOptHtml = idOptions.map(opt => `<option value="${opt}" ${s.id===opt?'selected':''}>${opt}</option>`).join('');
+
             h += `<div class="editor-row"><b>${u}</b><br>
             售賣: <select onchange="updateSet('${u}','m',this.value)"><option value="招標" ${s.m==='招標'?'selected':''}>招標</option><option value="價單" ${s.m==='價單'?'selected':''}>價單</option></select>
-            身份: <select onchange="updateSet('${u}','id',this.value)"><option value="香港居民-非永居" ${s.id==='香港居民-非永居'?'selected':''}>非永居</option><option value="香港居民-永居" ${s.id==='香港居民-永居'?'selected':''}>永居</option><option value="中國內地" ${s.id==='中國內地'?'selected':''}>內地</option><option value="香港商業登記證" ${s.id==='香港商業登記證'?'selected':''}>公司</option></select>
+            身份: <select onchange="updateSet('${u}','id',this.value)">${idOptHtml}</select>
             用途: <select onchange="updateSet('${u}','us',this.value)"><option value="自住" ${s.us==='自住'?'selected':''}>自住</option><option value="投資" ${s.us==='投資'?'selected':''}>投資</option></select></div>`;
         });
         document.getElementById('editor-container').innerHTML = h;
@@ -145,34 +316,43 @@
         
         allDeals.forEach(r => {
             let yr = r.pDate ? r.pDate.substring(0,4) : "";
-            let a = parseFloat(String(r[9]).replace(/,/g,''))||0, s = parseFloat(String(r[10]).replace(/,/g,''))||0;
+            let a = parseFloat(String(r[27]).replace(/,/g,''))||0, s = parseFloat(String(r[28]).replace(/,/g,''))||0;
             st.tC++; st.tA+=a; st.tS+=s;
             if(yr==='2024') st.y24++; if(yr==='2025') st.y25++; if(yr==='2026') st.y26++;
         });
 
-        let m1 = `維港雙鑽 開單 (${sd.split('-')[2]}/${sd.split('-')[1]}) (${w})\n\n`;
+        // 取日期 D/M/YYYY
+        let shortD = parseInt(sd.split('-')[2]) + '/' + parseInt(sd.split('-')[1]) + '/' + sd.split('-')[0];
+        let shortD_Msg3 = parseInt(sd.split('-')[2]) + '/' + parseInt(sd.split('-')[1]);
+        
+        let m1 = `維港雙鑽 開單 (${shortD}) (${w})\n\n`;
         let agG = {};
+        let emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
         
         currentDeals.forEach((r, i) => {
-            let u = `${String(r[5]).replace("Tower ","T").trim()}-${r[6]}${r[7]}`;
-            let s = savedSettings[u] || {m:"招標", id:parseID(r[2]), us:"自住"};
-            let sq = parseFloat(String(r[10]).replace(/,/g,''))||0, ps = parseFloat(String(r[11]).replace(/,/g,''))||0;
-            let am = parseFloat(String(r[9]).replace(/,/g,''))||0, cm = parseFloat(String(r[27]).replace(/,/g,''))||0;
-            let ag = agInfo(r[24]);
+            let u = `${String(r[23]).replace("Tower ","T").trim()}-${r[24]}${r[25]}`;
+            let s = savedSettings[u] || {m:"招標", id:getIDStr(r[5]), us:"自住"};
+            let sq = parseFloat(String(r[28]).replace(/,/g,''))||0, ps = parseFloat(String(r[29]).replace(/,/g,''))||0;
+            let am = parseFloat(String(r[27]).replace(/,/g,''))||0, cm = parseFloat(String(r[48]).replace(/,/g,''))||0;
+            let ag = agInfo(r[42]);
+            let emo = i < emojis.length ? emojis[i] : `${i+1}️⃣`;
+            let branch = String(r[45] || "").trim();
+            let layout = String(r[26] || "").trim();
             
-            m1 += `${i+1}️⃣  ${u} （${s.m}）\n實呎${sq}‘ @${ps.toLocaleString('en-US')}\n戶型：${r[8]}(${s.id})(${s.us})\n合額：$${am.toLocaleString('en-US')}\n付款：${r[12]}\n代理：${ag.n.includes('置業')?'港置':ag.n}-${r[25]}\n佣金：${(cm<1&&cm>0)?(cm*100).toFixed(1)+'%':cm+'%'}\n\n`;
+            m1 += `${emo}  ${u} （${s.m}）\n實呎${sq}‘ @${ps.toLocaleString('en-US')}\n戶型：${layout}(${s.id})(${s.us})\n合額：$${am.toLocaleString('en-US')}\n付款：${r[30]}\n代理：${ag.n.includes('置業')?'港置':ag.n}-${branch}\n佣金：${(cm<1&&cm>0)?(cm*100).toFixed(1)+'%':cm+'%'}\n\n`;
             
             if(!agG[ag.n]) agG[ag.n] = {h:ag.h, c:0, d:[]};
-            agG[ag.n].c++; agG[ag.n].d.push(`${r[25]} ${u} ${sq}' ${r[8]}`);
+            agG[ag.n].c++; agG[ag.n].d.push(`${branch} ${u} ${sq}' ${layout}`);
         });
 
         let psf = st.tS>0 ? Math.round(st.tA/st.tS) : 0;
         let m2 = `維港·雙鑽是日累售：${currentDeals.length}伙\n\n2024年累售：${st.y24}伙\n2025年累售：${st.y25}伙\n2026年累售：${st.y26}伙\n\n(2024年11月29日開放現樓首輪暫售出${st.tC}伙，合約金額$${(st.tA/100000000).toFixed(2)}億) 「平均呎價$${psf.toLocaleString('en-US')}」\n\n總累售（佔總伙數％）：${st.tC}伙（${((st.tC/TOTAL)*100).toFixed(1)}％）\n總單位數：702伙\n現可供出售單位數：${document.getElementById('input-available').value}伙`;
 
-        let m3 = `💎維港·雙鑽 💎 🔥成交速報🔥\n\n${sd.split('-')[2]}/${sd.split('-')[1]} (${w})：暫成交${currentDeals.length}伙\n\n`;
+        let tEmo = currentDeals.length <= 10 && currentDeals.length > 0 ? emojis[currentDeals.length-1] : currentDeals.length;
+        let m3 = `💎維港·雙鑽 💎 🔥成交速報🔥\n${shortD_Msg3} (${w})：暫成交${tEmo}伙\n`;
         let ord = ["中原","美聯","利嘉閣","港置","世紀21","總會","香港(國際)地產商會","潤東置業（香港）有限公司","搜房 (香港) 集團有限公司"];
         Object.keys(agG).sort((a,b)=>{ let x=ord.indexOf(a),y=ord.indexOf(b); return (x===-1?99:x)-(y===-1?99:y); }).forEach(k => {
-            m3 += `${agG[k].h}${k}：${agG[k].c}\n` + agG[k].d.join('\n') + `\n\n`;
+            m3 += `\n${agG[k].h}${k}：${agG[k].c}\n` + agG[k].d.join('\n');
         });
 
         document.getElementById('out1').value = m1.trim(); document.getElementById('out2').value = m2.trim(); document.getElementById('out3').value = m3.trim();

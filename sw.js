@@ -1,6 +1,6 @@
-const CACHE_NAME = 'coli-sales-split-v1';
-// 必須包含晒兩個獨立網頁嘅檔名
+const CACHE_NAME = 'coli-sales-tech-v3';
 const ASSETS_TO_CACHE = [
+  './index.html',
   './VD_Sales.html',
   './V1_Sales.html',
   './manifest.json',

@@ -3,30 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#002E5D">
+    <meta name="theme-color" content="#121212">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="COLI 報數">
     <link rel="manifest" href="./manifest.json">
     
-    <title>中國海外 - 綜合銷售報數系統</title>
+    <title>中國海外 - 綜合銷售報數系統 (Tech Edition)</title>
 
     <style>
         :root {
-            --coli-blue: #002E5D;
-            --coli-gold: #D4AF37;
-            --coli-light-blue: #004b99;
-            --bg-color: #f4f6f9;
+            /* 高科技玫瑰金與深灰配色 */
+            --rose-gold: #C07C88;
+            --rose-gold-light: #E2B4BD;
+            --rose-gold-glow: rgba(192, 124, 136, 0.4);
+            --gray-900: #121212;
+            --gray-800: #1e1e1e;
+            --gray-700: #2d2d2d;
+            --text-main: #f0f0f0;
+            --text-muted: #a0a0a0;
         }
 
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        * { box-sizing: border-box; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         
         body {
             margin: 0;
             padding: 0;
-            background-color: var(--bg-color);
-            background-image: repeating-linear-gradient(45deg, rgba(0, 46, 93, 0.03) 0, rgba(0, 46, 93, 0.03) 2px, transparent 2px, transparent 10px);
-            color: #333;
+            background-color: var(--gray-900);
+            /* 科技感網格背景 */
+            background-image: 
+                linear-gradient(rgba(192, 124, 136, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(192, 124, 136, 0.05) 1px, transparent 1px);
+            background-size: 25px 25px;
+            color: var(--text-main);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -34,51 +43,75 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        /* 頂部 Header */
+        /* 頂部 Header - 金屬質感 */
         .header {
             width: 100%;
-            background: linear-gradient(135deg, var(--coli-blue) 0%, var(--coli-light-blue) 100%);
-            color: white;
-            padding: 30px 20px;
+            background: linear-gradient(180deg, rgba(30,30,30,0.95) 0%, rgba(18,18,18,0.95) 100%);
+            backdrop-filter: blur(10px);
+            color: var(--rose-gold-light);
+            padding: 35px 20px;
             text-align: center;
-            border-bottom: 4px solid var(--coli-gold);
-            box-shadow: 0 4px 15px rgba(0, 46, 93, 0.2);
+            border-bottom: 2px solid var(--rose-gold);
+            box-shadow: 0 4px 20px var(--rose-gold-glow);
+            position: relative;
+            overflow: hidden;
         }
 
-        .header h1 { margin: 0; font-size: 24px; letter-spacing: 2px; font-weight: 600; }
-        .header p { margin: 8px 0 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.8); letter-spacing: 3px; }
+        /* Header 掃光特效 */
+        .header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(226, 180, 189, 0.1), transparent);
+            transform: skewX(-20deg);
+            animation: sweep 4s infinite linear;
+        }
+
+        @keyframes sweep {
+            0% { left: -100%; }
+            50%, 100% { left: 200%; }
+        }
+
+        .header h1 { margin: 0; font-size: 26px; letter-spacing: 3px; font-weight: 700; text-shadow: 0 0 10px var(--rose-gold-glow); }
+        .header p { margin: 10px 0 0 0; font-size: 12px; color: var(--text-muted); letter-spacing: 4px; font-family: monospace; }
 
         /* 項目選擇容器 */
         .portal-container {
             width: 100%;
             max-width: 600px;
-            padding: 40px 20px;
+            padding: 50px 20px;
             display: flex;
             flex-direction: column;
             gap: 25px;
         }
 
-        /* 樓盤按鈕卡片 */
+        /* 樓盤按鈕卡片 - 玻璃科技感 */
         .project-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-left: 6px solid var(--coli-gold);
+            background: rgba(45, 45, 45, 0.6);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(192, 124, 136, 0.2);
+            border-left: 4px solid var(--rose-gold);
             border-radius: 12px;
-            padding: 30px 20px;
+            padding: 30px 25px;
             text-decoration: none;
-            color: var(--coli-blue);
+            color: var(--text-main);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 8px 20px rgba(0, 46, 93, 0.08);
-            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
         }
 
         .project-card:hover, .project-card:active {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(0, 46, 93, 0.15);
-            background: #fff;
+            transform: translateY(-5px) scale(1.02);
+            border-color: var(--rose-gold);
+            box-shadow: 0 10px 30px var(--rose-gold-glow);
+            background: rgba(60, 60, 60, 0.8);
         }
 
         .card-content h2 {
@@ -86,42 +119,60 @@
             font-size: 22px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            font-weight: 600;
         }
 
         .card-content p {
             margin: 0;
-            font-size: 14px;
-            color: #666;
+            font-size: 13px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
         }
 
         .arrow {
-            font-size: 24px;
-            color: var(--coli-gold);
+            font-size: 20px;
+            color: var(--rose-gold);
             font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+
+        .project-card:hover .arrow {
+            transform: translateX(5px);
+            text-shadow: 0 0 8px var(--rose-gold-light);
         }
 
         .footer {
             margin-top: auto;
-            padding: 20px;
+            padding: 30px 20px;
             font-size: 11px;
-            color: #888;
+            color: #555;
             text-align: center;
+            letter-spacing: 1px;
         }
 
         /* PWA 安裝提示 */
         #pwa-install-banner {
             display: none;
-            background-color: var(--coli-gold);
-            color: #fff;
-            padding: 12px;
+            background: linear-gradient(90deg, var(--gray-700), var(--gray-800));
+            color: var(--rose-gold-light);
+            border: 1px solid var(--rose-gold);
+            padding: 15px;
             text-align: center;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            font-size: 14px;
             font-weight: bold;
-            box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+            box-shadow: 0 0 15px var(--rose-gold-glow);
             cursor: pointer;
             width: 100%;
+            animation: pulse-banner 2s infinite;
+        }
+
+        @keyframes pulse-banner {
+            0% { box-shadow: 0 0 10px var(--rose-gold-glow); }
+            50% { box-shadow: 0 0 20px var(--rose-gold-light); }
+            100% { box-shadow: 0 0 10px var(--rose-gold-glow); }
         }
     </style>
 </head>
@@ -129,13 +180,13 @@
 
     <div class="header">
         <h1>中國海外</h1>
-        <p>INTERNAL SALES DASHBOARD</p>
+        <p>INTERNAL SALES SYSTEM // V2.0</p>
     </div>
 
     <div class="portal-container">
         
         <div id="pwa-install-banner" onclick="installPWA()">
-            📲 點擊安裝「COLI 報數」至手機主畫面 (支援離線使用)
+            [+] 點擊安裝系統至裝置 (支援離線運算)
         </div>
 
         <a href="./VD_Sales.html" class="project-card">
@@ -146,7 +197,7 @@
             <div class="arrow">➔</div>
         </a>
 
-        <a href="./V1_Sales.html" class="project-card" style="border-left-color: var(--coli-blue);">
+        <a href="./V1_Sales.html" class="project-card">
             <div class="card-content">
                 <h2>🛥️ 維港1號</h2>
                 <p>啟德跑道區 (One Victoria)</p>
@@ -157,20 +208,18 @@
     </div>
 
     <div class="footer">
-        © 2026 China Overseas Land & Investment Ltd. All Rights Reserved.
+        SYS.VER 2.0.26 © COLI HONG KONG. ALL RIGHTS RESERVED.
     </div>
 
     <script>
-        // 註冊 Service Worker 確保傳送門都可以離線開啟
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('COLI ServiceWorker 註冊成功'))
-                    .catch(err => console.log('SW 註冊失敗', err));
+                    .then(reg => console.log('SYS: Service Worker Core Activated'))
+                    .catch(err => console.log('SYS: SW Error', err));
             });
         }
 
-        // PWA 安裝邏輯
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
