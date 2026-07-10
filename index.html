@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中國海外發展 (0688.HK) - 成交報數及資料管理面板 v5</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* 原有 CSS 保持不變 */
+        :root { --coli-blue: #003366; --coli-gold: #D4AF37; --bg-color: #f4f6f8; --border-color: #ccc; }
+        body { font-family: 'Microsoft JhengHei', sans-serif; background: var(--bg-color); margin: 0; padding: 20px; color: #333; }
+        .header { background: var(--coli-blue); color: white; padding: 20px; text-align: center; border-bottom: 5px solid var(--coli-gold); border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .container { background: white; padding: 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 1000px; margin: 0 auto; }
+        .controls, .tuning-panel, .settings-panel { background: #f9f5eb; padding: 15px; border-radius: 6px; border: 1px solid var(--coli-gold); margin-bottom: 15px; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .control-group { display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 5px; color: var(--coli-blue); font-size: 14px; }
+        input, select { padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; }
+        .tuning-panel { background: #fff; border-color: var(--coli-blue); }
+        .tuning-header { color: var(--coli-blue); font-size: 16px; font-weight: bold; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .unit-card { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 10px; background: #f4f6f8; padding: 10px; margin-bottom: 10px; border-radius: 4px; align-items: center; border-left: 4px solid var(--coli-blue); }
+        .unit-info { font-weight: bold; color: #333; font-size: 14px;}
+        .id-mapping { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .id-mapping div { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .btn-primary { background: var(--coli-gold); color: var(--coli-blue); border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; width: 100%; transition: 0.3s; margin-bottom: 20px; }
+        .btn-primary:hover { background: #b5952f; color: white; }
+        .output-card { background: #fff; border: 1px solid #ddd; border-left: 5px solid var(--coli-blue); border-radius: 6px; margin-bottom: 20px; }
+        .output-header { background: #f9f9f9; padding: 10px 15px; font-weight: bold; color: var(--coli-blue); border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+        .copy-btn { background: var(--coli-blue); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .copy-btn:hover { background: var(--coli-gold); color: var(--coli-blue); }
+        .output-content { padding: 15px; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 15px; line-height: 1.6; outline: none; }
+        .output-content:focus { background-color: #fdfdfd; box-shadow: inset 0 0 5px rgba(0,51,102,0.2); }
+        .edit-hint { font-size: 12px; color: #888; font-weight: normal; margin-left: 10px; }
+        .inline-input-group { background: #e6f2ff; border: 1px solid #b3d7ff; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--coli-blue); font-weight: bold;}
+        .inline-input-group input { padding: 3px 6px; width: 50px; border: 1px solid #99ccff; text-align: center; font-weight: bold; color: #000; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>中國海外發展 (0688.HK)</h1>
+    <p>維港1號成交報數及資料管理面板 v5</p>
+</div>
+
+<div class="container">
+    <div class="controls">
+        <div class="control-group">
+            <label>1. 上傳 Excel 檔案</label>
+            <input type="file" id="excelFile" accept=".xlsx, .xls">
+        </div>
+        <div class="control-group">
+            <label>2. 選擇報數日期</label>
+            <input type="date" id="reportDate" onchange="loadDailySales()">
+        </div>
+    </div>
+
+    <div class="settings-panel">
+        <label>證件類別對照設定</label>
+        <div class="id-mapping" id="idSettings">
+            <div><input type="text" value="香港居民身份證" readonly style="background:#eee;"> ➔ <input type="text" id="map-hknonpr" value="(香港居民-非永居)"></div>
+            <div><input type="text" value="香港永久性居民身份證" readonly style="background:#eee;"> ➔ <input type="text" id="map-hkpr" value="(香港居民-永居)"></div>
+            <div><input type="text" value="香港商業登記證" readonly style="background:#eee;"> ➔ <input type="text" id="map-company" value="(香港商業登記證)"></div>
+            <div><input type="text" value="中華人民共和國居民身份證" readonly style="background:#eee;"> ➔ <input type="text" id="map-cnid" value="(中國內地)"></div>
+            <div><input type="text" value="中華人民共和國護照" readonly style="background:#eee;"> ➔ <input type="text" id="map-cnpassport" value="(中國內地)"></div>
+            <div><input type="text" value="澳門特別行政區永久性居民身份證" readonly style="background:#eee;"> ➔ <input type="text" id="map-macau" value="(澳門-永居)"></div>
+        </div>
+    </div>
+
+    <div class="tuning-panel" id="tuningPanel" style="display:none;">
+        <h3 class="tuning-header">當日成交單位微調面板 (共 <span id="dailyCount">0</span> 伙)</h3>
+        <div id="unitCardsContainer"></div>
+    </div>
+
+    <button class="btn-primary" onclick="generateReports()">即時生成報表</button>
+
+    <div id="outputArea" style="display:none;">
+        <div class="output-card">
+            <div class="output-header">
+                <div>格仔一：當日成交明細 <span class="edit-hint">✏️ 點擊下方文字可手動修改</span></div>
+                <button class="copy-btn" onclick="copyText('out1')">複製</button>
+            </div>
+            <div class="output-content" id="out1" contenteditable="true"></div>
+        </div>
+
+        <div class="output-card">
+            <div class="output-header">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span>格仔二：銷情數據</span>
+                    <div class="inline-input-group">
+                        現可供出售數: <input type="number" id="availUnits" value="1" oninput="generateReports()"> 伙
+                    </div>
+                    <span class="edit-hint">✏️ 點擊下方文字亦可手動修改</span>
+                </div>
+                <button class="copy-btn" onclick="copyText('out2')">複製</button>
+            </div>
+            <div class="output-content" id="out2" contenteditable="true"></div>
+        </div>
+
+        <div class="output-card">
+            <div class="output-header">
+                <div>格仔三：代理速報 <span class="edit-hint">✏️ 點 klik 下方文字可手動修改</span></div>
+                <button class="copy-btn" onclick="copyText('out3')">複製</button>
+            </div>
+            <div class="output-content" id="out3" contenteditable="true"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 引入外部 JS -->
+<script src="script.js"></script>
+</body>
+</html>
