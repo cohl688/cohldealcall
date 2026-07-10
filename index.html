@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#002E5D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="COLI 報數">
+    <link rel="manifest" href="./manifest.json">
+    
+    <title>中國海外 - 綜合銷售報數系統</title>
+
+    <style>
+        :root {
+            --coli-blue: #002E5D;
+            --coli-gold: #D4AF37;
+            --coli-light-blue: #004b99;
+            --bg-color: #f4f6f9;
+        }
+
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            background-image: repeating-linear-gradient(45deg, rgba(0, 46, 93, 0.03) 0, rgba(0, 46, 93, 0.03) 2px, transparent 2px, transparent 10px);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* 頂部 Header */
+        .header {
+            width: 100%;
+            background: linear-gradient(135deg, var(--coli-blue) 0%, var(--coli-light-blue) 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 4px solid var(--coli-gold);
+            box-shadow: 0 4px 15px rgba(0, 46, 93, 0.2);
+        }
+
+        .header h1 { margin: 0; font-size: 24px; letter-spacing: 2px; font-weight: 600; }
+        .header p { margin: 8px 0 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.8); letter-spacing: 3px; }
+
+        /* 項目選擇容器 */
+        .portal-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        /* 樓盤按鈕卡片 */
+        .project-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-left: 6px solid var(--coli-gold);
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-decoration: none;
+            color: var(--coli-blue);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 8px 20px rgba(0, 46, 93, 0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .project-card:hover, .project-card:active {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0, 46, 93, 0.15);
+            background: #fff;
+        }
+
+        .card-content h2 {
+            margin: 0 0 8px 0;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-content p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .arrow {
+            font-size: 24px;
+            color: var(--coli-gold);
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: auto;
+            padding: 20px;
+            font-size: 11px;
+            color: #888;
+            text-align: center;
+        }
+
+        /* PWA 安裝提示 */
+        #pwa-install-banner {
+            display: none;
+            background-color: var(--coli-gold);
+            color: #fff;
+            padding: 12px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+            cursor: pointer;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>中國海外</h1>
+        <p>INTERNAL SALES DASHBOARD</p>
+    </div>
+
+    <div class="portal-container">
+        
+        <div id="pwa-install-banner" onclick="installPWA()">
+            📲 點擊安裝「COLI 報數」至手機主畫面 (支援離線使用)
+        </div>
+
+        <a href="./VD_Sales.html" class="project-card">
+            <div class="card-content">
+                <h2>💎 維港·雙鑽</h2>
+                <p>啟德跑道區 (Twin Victoria)</p>
+            </div>
+            <div class="arrow">➔</div>
+        </a>
+
+        <a href="./V1_Sales.html" class="project-card" style="border-left-color: var(--coli-blue);">
+            <div class="card-content">
+                <h2>🛥️ 維港1號</h2>
+                <p>啟德跑道區 (One Victoria)</p>
+            </div>
+            <div class="arrow">➔</div>
+        </a>
+
+    </div>
+
+    <div class="footer">
+        © 2026 China Overseas Land & Investment Ltd. All Rights Reserved.
+    </div>
+
+    <script>
+        // 註冊 Service Worker 確保傳送門都可以離線開啟
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('COLI ServiceWorker 註冊成功'))
+                    .catch(err => console.log('SW 註冊失敗', err));
+            });
+        }
+
+        // PWA 安裝邏輯
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('pwa-install-banner').style.display = 'block';
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    deferredPrompt = null;
+                    document.getElementById('pwa-install-banner').style.display = 'none';
+                });
+            }
+        }
+    </script>
+</body>
+</html>
