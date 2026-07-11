@@ -6,59 +6,60 @@
     <title>維港灣畔 (車位) - 報數系統</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
+        /* 新版中國海外 (COHL) 企業美學 CSS */
         :root {
-            /* 尊貴高尚住宅主題 (Premium Luxury Residential) */
-            --primary: #002E5D; /* 深邃海軍藍 */
-            --accent: #D4AF37; /* 香檳金 */
-            --bg-grad: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
-            --card-bg: rgba(255, 255, 255, 0.96);
-            --text-dark: #1e293b;
+            --cohl-blue: #00387b; /* 企業深藍 */
+            --cohl-gold: #c4a661; /* 典雅香檳金 */
+            --bg-color: #f5f7fa; /* 淺灰背景 */
+            --card-bg: #ffffff; /* 純白卡片 */
+            --text-main: #222222;
+            --text-muted: #666666;
+            --border-color: #e5e9f0;
         }
-        * { box-sizing: border-box; font-family: 'Optima', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; }
-        body { margin: 0; padding: 25px 15px; background: var(--bg-grad); color: var(--text-dark); -webkit-overflow-scrolling: touch; min-height: 100vh; }
-        body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('data:image/svg+xml;utf8,<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1.2" fill="rgba(212,175,55,0.15)"/></svg>'); z-index: -1; }
+        * { box-sizing: border-box; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        body { margin: 0; padding: 20px 15px; background: var(--bg-color); color: var(--text-main); -webkit-overflow-scrolling: touch; min-height: 100vh; }
         
-        .container { background: var(--card-bg); border-radius: 16px; box-shadow: 0 25px 50px rgba(0,46,93,0.08), 0 5px 15px rgba(0,0,0,0.05); max-width: 850px; margin: 0 auto; overflow: hidden; border: 1px solid rgba(255,255,255,0.9); backdrop-filter: blur(20px); }
-        .header { background: linear-gradient(135deg, #00152b, var(--primary)); color: var(--accent); padding: 35px 20px; text-align: center; border-bottom: 3px solid var(--accent); position: relative; }
-        .header h1 { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: 3px; text-shadow: 0 2px 5px rgba(0,0,0,0.4); }
-        .save-indicator { position: absolute; top: 15px; right: 20px; font-size: 11px; background: rgba(212,175,55,0.15); border: 1px solid var(--accent); color: var(--accent); padding: 5px 12px; border-radius: 20px; font-weight: bold; letter-spacing: 1px; backdrop-filter: blur(5px); }
+        .container { background: var(--card-bg); border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 56, 123, 0.08); max-width: 850px; margin: 0 auto; overflow: hidden; border: 1px solid rgba(0, 56, 123, 0.05); }
+        .header { background: var(--cohl-blue); color: #fff; padding: 35px 20px; text-align: center; border-bottom: 4px solid var(--cohl-gold); position: relative; background-image: linear-gradient(135deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.03) 75%, transparent 75%, transparent); background-size: 40px 40px; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: 2px; }
+        .save-indicator { position: absolute; top: 15px; right: 20px; font-size: 11px; background: rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 20px; color: #fff; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); letter-spacing: 1px; }
         
         .content { padding: 30px 25px; }
-        .section-title { font-size: 17px; color: var(--primary); font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; letter-spacing: 1px; }
-        .section-title::before { content: ''; width: 4px; height: 18px; background: linear-gradient(to bottom, var(--accent), #b48c25); margin-right: 12px; border-radius: 2px; }
+        .section-title { font-size: 17px; color: var(--cohl-blue); font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; letter-spacing: 1px; }
+        .section-title::before { content: ''; width: 5px; height: 18px; background: var(--cohl-gold); margin-right: 12px; border-radius: 2px; display: inline-block; }
         
-        .card { background: #fff; border: 1px solid rgba(0,46,93,0.06); padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,46,93,0.08); }
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 25px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: all 0.3s ease; }
+        .card:hover { box-shadow: 0 8px 30px rgba(0, 56, 123, 0.08); transform: translateY(-2px); }
         
-        select, input { padding: 12px 15px; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; margin-top: 8px; transition: all 0.3s; background: #f8fafc; color: var(--text-dark); }
-        select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212,175,55,0.2); background: #fff; }
-        textarea { width: 100%; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical; background-color: #f8fafc; line-height: 1.6; transition: border-color 0.3s; color: var(--text-dark); }
-        textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+        @keyframes pulse-highlight { 0% { background-color: #f8fafd; border-color: var(--cohl-blue); } 100% { background-color: transparent; border-color: var(--border-color); } }
+        .bounce-alert { animation: pulse-highlight 1.5s ease-out; border: 2px solid var(--cohl-gold) !important; box-shadow: 0 8px 25px rgba(196, 166, 97, 0.2) !important; }
+
+        .id-mapping { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top:15px; }
+        .id-mapping div { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
+        .id-mapping input { margin-top: 0; padding: 8px; font-size: 13px; }
+        .custom-new-id { animation: pulse-highlight 2s ease-out forwards; border: 1px dashed var(--cohl-gold); border-radius: 6px; padding: 6px; }
+
+        select, input { padding: 12px 15px; width: 100%; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; margin-top: 5px; background: #fcfcfd; transition: all 0.3s; color: var(--text-main); }
+        select:focus, input:focus { outline: none; border-color: var(--cohl-blue); box-shadow: 0 0 0 3px rgba(0, 56, 123, 0.1); background: #fff; }
+        textarea { width: 100%; padding: 15px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; resize: vertical; background-color: #fcfcfd; color: var(--text-main); line-height: 1.6; transition: all 0.3s; }
+        textarea:focus { outline: none; border-color: var(--cohl-blue); background: #fff; }
         
-        .btn { background: linear-gradient(135deg, var(--primary), #004b99); color: #fff; border: none; padding: 14px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; margin-bottom: 15px; letter-spacing: 1px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,46,93,0.2); }
-        .btn:hover { background: linear-gradient(135deg, #00152b, var(--primary)); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,46,93,0.3); }
+        .btn { background: var(--cohl-blue); color: #fff; border: none; padding: 14px 20px; border-radius: 6px; cursor: pointer; font-weight: 500; width: 100%; margin-bottom: 15px; letter-spacing: 1px; transition: all 0.3s; }
+        .btn:hover { background: #00285a; box-shadow: 0 6px 18px rgba(0, 56, 123, 0.25); transform: translateY(-1px); }
         
-        .editor-row { background: #f8fafc; border-left: 3px solid #e2e8f0; padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 20px; transition: border-color 0.3s, background 0.3s; }
-        .editor-row:hover { border-left-color: var(--accent); background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        .editor-row { background: #f8fafd; border-left: 4px solid var(--border-color); padding: 20px; border-radius: 0 8px 8px 0; margin-bottom: 15px; transition: all 0.3s; }
+        .editor-row:hover { border-left-color: var(--cohl-gold); background: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
         
-        .id-mapping { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;}
-        .id-mapping div { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-        .id-mapping input { margin-top: 0; padding: 8px 12px; }
-        @media (max-width: 600px) { .id-mapping, .grid-2 { grid-template-columns: 1fr; } }
-        
-        @keyframes subtle-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        @keyframes pulse-highlight { 0% { background-color: rgba(212,175,55,0.1); border-color: var(--accent); } 100% { background-color: transparent; border-color: #e2e8f0; } }
-        .bounce-alert { animation: subtle-bounce 0.5s ease 3; border: 1px solid var(--accent) !important; background-color: rgba(212,175,55,0.02) !important; box-shadow: 0 8px 25px rgba(212,175,55,0.15) !important; }
-        .custom-new-id { animation: pulse-highlight 2.5s ease-out forwards; border: 1px dashed var(--accent); border-radius: 8px; padding: 8px; }
-        
+        /* 針對多檔案上傳區塊 */
         .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .upload-box { border: 2px dashed rgba(0,46,93,0.2); padding: 15px 10px; border-radius: 10px; text-align: center; background: #f8fafc; transition: all 0.3s; cursor: pointer; }
-        .upload-box:hover { border-color: var(--accent); background: #fff; }
-        .upload-box label { font-size: 13px; font-weight: 600; color: var(--primary); display: block; margin-bottom: 8px; }
-        .upload-box input { font-size: 11px; padding: 0; border: none; background: transparent; width: 100%; color: #666; cursor: pointer; }
-        .upload-box.has-data { border: 2px solid var(--accent); background: rgba(212,175,55,0.05); }
-        @media (max-width: 600px) { .upload-grid { grid-template-columns: 1fr; } }
+        .upload-box { border: 2px dashed #d1d5db; padding: 25px 15px; border-radius: 8px; text-align: center; background: #fafafa; transition: all 0.3s; cursor: pointer; }
+        .upload-box:hover { border-color: var(--cohl-blue); background: #f0f4f8; }
+        .upload-box label { font-size: 14px; font-weight: 600; color: var(--cohl-blue); display: block; margin-bottom: 8px; }
+        .upload-box input { font-size: 12px; padding: 0; border: none; background: transparent; width: 100%; color: var(--text-muted); cursor: pointer; }
+        .upload-box.has-data { border: 2px solid var(--cohl-gold); background: rgba(196, 166, 97, 0.05); }
+        
+        @media (max-width: 600px) { .upload-grid, .id-mapping, .grid-2 { grid-template-columns: 1fr; } .editor-row > div { grid-template-columns: 1fr 1fr !important; } }
     </style>
 </head>
 <body>

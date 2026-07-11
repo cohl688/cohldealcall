@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coli-sales-tech-v5';
+const CACHE_NAME = 'cohl-sales-tech-v6';
 const ASSETS_TO_CACHE = [
   './index.html',
   './VD_Sales.html',

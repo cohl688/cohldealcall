@@ -3,62 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#121212">
+    <meta name="theme-color" content="#00387B">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>中國海外 - 綜合銷售報數系統</title>
+    <meta name="apple-mobile-web-app-title" content="COHL 報數">
     <link rel="manifest" href="./manifest.json">
+    
+    <title>CHINA OVERSEAS - Intelligent Sales System</title>
+
     <style>
         :root {
-            --rose-gold: #C07C88; --rose-gold-light: #E2B4BD; --rose-gold-glow: rgba(192, 124, 136, 0.4);
-            --gray-900: #121212; --gray-800: #1e1e1e; --text-main: #f0f0f0; --text-muted: #a0a0a0;
+            --cohl-blue: #00387b; /* COHL 官方企業藍 */
+            --cohl-gold: #c4a661; /* 官方金/香檳色 */
+            --bg-color: #f5f7fa;
+            --text-main: #222222;
+            --text-muted: #666666;
+            --border-color: #e5e9f0;
         }
-        * { box-sizing: border-box; font-family: 'SF Pro Display', -apple-system, sans-serif; }
-        body {
-            margin: 0; padding: 0; background-color: var(--gray-900);
-            background-image: linear-gradient(rgba(192, 124, 136, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(192, 124, 136, 0.05) 1px, transparent 1px);
-            background-size: 25px 25px; color: var(--text-main); display: flex; flex-direction: column; align-items: center; min-height: 100vh;
-        }
-        .header {
-            width: 100%; background: linear-gradient(180deg, rgba(30,30,30,0.95), rgba(18,18,18,0.95)); backdrop-filter: blur(10px);
-            color: var(--rose-gold-light); padding: 35px 20px; text-align: center; border-bottom: 2px solid var(--rose-gold); box-shadow: 0 4px 20px var(--rose-gold-glow);
-        }
-        .header h1 { margin: 0; font-size: 26px; letter-spacing: 3px; }
-        .header p { margin: 10px 0 0 0; font-size: 12px; color: var(--text-muted); letter-spacing: 4px; }
-        .portal-container { width: 100%; max-width: 600px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+
+        * { box-sizing: border-box; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
         
-        .section-title { font-size: 14px; color: var(--rose-gold-light); letter-spacing: 2px; margin-top: 15px; border-bottom: 1px solid rgba(192,124,136,0.3); padding-bottom: 5px; }
+        body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-main); -webkit-overflow-scrolling: touch; }
+
+        /* 企業級頂部導航 */
+        .top-nav {
+            background: #ffffff;
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--cohl-blue);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+        }
         
+        .logo-text::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background: var(--cohl-blue);
+            margin-right: 12px;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        /* 企業 Banner */
+        .hero {
+            background: var(--cohl-blue);
+            color: #ffffff;
+            padding: 60px 25px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            background-image: linear-gradient(135deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.03) 75%, transparent 75%, transparent);
+            background-size: 40px 40px;
+        }
+        
+        .hero::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: var(--cohl-gold);
+        }
+
+        .hero h1 { margin: 0; font-size: 28px; font-weight: 300; letter-spacing: 2px; }
+        .hero p { margin: 15px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.8); letter-spacing: 1px; }
+
+        /* 內容區塊 */
+        .portal-container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        .section-header { font-size: 18px; color: var(--cohl-blue); font-weight: 600; margin: 30px 0 20px 0; display: flex; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        .section-header::before { content: ''; width: 4px; height: 18px; background: var(--cohl-gold); margin-right: 12px; }
+
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .grid-container { grid-template-columns: 1fr; } }
+
+        /* 企業級白色卡片 */
         .project-card {
-            background: rgba(45, 45, 45, 0.6); border: 1px solid rgba(192, 124, 136, 0.2); border-left: 4px solid var(--rose-gold);
-            border-radius: 12px; padding: 20px; text-decoration: none; color: var(--text-main); display: flex; align-items: center; justify-content: space-between; transition: all 0.3s;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            text-decoration: none;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+            position: relative;
         }
-        .project-card:hover { transform: translateY(-3px); border-color: var(--rose-gold); box-shadow: 0 5px 20px var(--rose-gold-glow); background: rgba(60, 60, 60, 0.8); }
-        .card-content h2 { margin: 0 0 5px 0; font-size: 18px; }
-        .card-content p { margin: 0; font-size: 11px; color: var(--text-muted); }
-        .arrow { font-size: 20px; color: var(--rose-gold); }
-        .footer { margin-top: auto; padding: 30px 20px; font-size: 11px; color: #555; text-align: center; }
+
+        .project-card::before {
+            content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%; background: var(--border-color); border-radius: 8px 0 0 8px; transition: background 0.3s;
+        }
+
+        .project-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 56, 123, 0.08);
+            border-color: rgba(0, 56, 123, 0.15);
+        }
+        
+        .project-card:hover::before { background: var(--cohl-gold); }
+
+        .card-content h2 { margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: var(--cohl-blue); }
+        .card-content p { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+        .arrow { font-size: 18px; color: var(--border-color); transition: all 0.3s; }
+        .project-card:hover .arrow { color: var(--cohl-gold); transform: translateX(5px); }
+
+        .footer { padding: 40px 20px; font-size: 12px; color: var(--text-muted); text-align: center; border-top: 1px solid var(--border-color); background: #ffffff; }
+
+        #pwa-install-banner {
+            display: none; background: #ffffff; color: var(--cohl-blue); border: 1px solid var(--cohl-blue); padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 25px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.3s;
+        }
+        #pwa-install-banner:hover { background: var(--cohl-blue); color: #fff; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>中國海外</h1>
-        <p>INTERNAL SALES SYSTEM // V4.0</p>
-    </div>
-    <div class="portal-container">
-        <div class="section-title">🏢 住宅報數系統 (RESIDENTIAL)</div>
-        <a href="./VD_Sales.html" class="project-card"><div class="card-content"><h2>💎 維港·雙鑽</h2><p>Twin Victoria</p></div><div class="arrow">➔</div></a>
-        <a href="./V1_Sales.html" class="project-card"><div class="card-content"><h2>🛥️ 維港 1 號</h2><p>One Victoria</p></div><div class="arrow">➔</div></a>
-        <a href="./VV_Sales.html" class="project-card" style="border-left-color:#6a11cb;"><div class="card-content"><h2>⛴️ 維港·灣畔</h2><p>Victoria Voyage</p></div><div class="arrow" style="color:#6a11cb;">➔</div></a>
 
-        <div class="section-title">🚗 車位報數系統 (CAR PARK)</div>
-        <a href="./OVCP_Sales.html" class="project-card" style="border-left-color:#4CAF50;"><div class="card-content"><h2>🛥️ 維港 1 號 (車位)</h2><p>OVCP</p></div><div class="arrow" style="color:#4CAF50;">➔</div></a>
-        <a href="./TVCP_Sales.html" class="project-card" style="border-left-color:#4CAF50;"><div class="card-content"><h2>💎 維港雙鑽 (車位)</h2><p>TVCP</p></div><div class="arrow" style="color:#4CAF50;">➔</div></a>
-        <a href="./VVCP_Sales.html" class="project-card" style="border-left-color:#4CAF50;"><div class="card-content"><h2>⛴️ 維港灣畔 (車位)</h2><p>VVCP</p></div><div class="arrow" style="color:#4CAF50;">➔</div></a>
+    <div class="top-nav">
+        <div class="logo-text">CHINA OVERSEAS</div>
     </div>
-    <div class="footer">SYS.VER 4.0.0 © COLI HONG KONG. ALL RIGHTS RESERVED.</div>
+
+    <div class="hero">
+        <h1>Intelligent Sales System</h1>
+        <p>Property & Carpark Performance Analytics</p>
+    </div>
+
+    <div class="portal-container">
+        <div id="pwa-install-banner" onclick="installPWA()">[+] 安裝系統至裝置 (支援離線運算)</div>
+
+        <div class="section-header">Residential Properties (住宅項目)</div>
+        <div class="grid-container">
+            <a href="./VD_Sales.html" class="project-card">
+                <div class="card-content"><h2>維港·雙鑽</h2><p>Twin Victoria</p></div><div class="arrow">➔</div>
+            </a>
+            <a href="./V1_Sales.html" class="project-card">
+                <div class="card-content"><h2>維港 1 號</h2><p>One Victoria</p></div><div class="arrow">➔</div>
+            </a>
+            <a href="./VV_Sales.html" class="project-card">
+                <div class="card-content"><h2>維港·灣畔</h2><p>Victoria Voyage (綜合期數)</p></div><div class="arrow">➔</div>
+            </a>
+        </div>
+
+        <div class="section-header">Carpark Properties (車位項目)</div>
+        <div class="grid-container">
+            <a href="./TVCP_Sales.html" class="project-card">
+                <div class="card-content"><h2>維港·雙鑽 (車位)</h2><p>TVCP</p></div><div class="arrow">➔</div>
+            </a>
+            <a href="./OVCP_Sales.html" class="project-card">
+                <div class="card-content"><h2>維港 1 號 (車位)</h2><p>OVCP</p></div><div class="arrow">➔</div>
+            </a>
+            <a href="./VVCP_Sales.html" class="project-card">
+                <div class="card-content"><h2>維港·灣畔 (車位)</h2><p>VVCP</p></div><div class="arrow">➔</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="footer">
+        © CHINA OVERSEAS HOLDINGS LIMITED. ALL RIGHTS RESERVED.
+    </div>
+
     <script>
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
+        }
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); deferredPrompt = e; document.getElementById('pwa-install-banner').style.display = 'block';
+        });
+        function installPWA() {
+            if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => { deferredPrompt = null; document.getElementById('pwa-install-banner').style.display = 'none'; }); }
+        }
     </script>
 </body>
 </html>
