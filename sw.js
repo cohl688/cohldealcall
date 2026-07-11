@@ -1,10 +1,12 @@
-const CACHE_NAME = 'coli-sales-tech-v4';
-// 必須確保所有 HTML 檔案都被快取，以便支援離線使用
+const CACHE_NAME = 'coli-sales-tech-v5';
 const ASSETS_TO_CACHE = [
   './index.html',
   './VD_Sales.html',
   './V1_Sales.html',
   './VV_Sales.html',
+  './OVCP_Sales.html',
+  './TVCP_Sales.html',
+  './VVCP_Sales.html',
   './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
 ];

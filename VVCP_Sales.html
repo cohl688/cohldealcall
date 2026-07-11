@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>維港灣畔 (車位) - 報數系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            /* 尊貴高尚住宅主題 (Premium Luxury Residential) */
+            --primary: #002E5D; /* 深邃海軍藍 */
+            --accent: #D4AF37; /* 香檳金 */
+            --bg-grad: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            --card-bg: rgba(255, 255, 255, 0.96);
+            --text-dark: #1e293b;
+        }
+        * { box-sizing: border-box; font-family: 'Optima', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { margin: 0; padding: 25px 15px; background: var(--bg-grad); color: var(--text-dark); -webkit-overflow-scrolling: touch; min-height: 100vh; }
+        body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('data:image/svg+xml;utf8,<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1.2" fill="rgba(212,175,55,0.15)"/></svg>'); z-index: -1; }
+        
+        .container { background: var(--card-bg); border-radius: 16px; box-shadow: 0 25px 50px rgba(0,46,93,0.08), 0 5px 15px rgba(0,0,0,0.05); max-width: 850px; margin: 0 auto; overflow: hidden; border: 1px solid rgba(255,255,255,0.9); backdrop-filter: blur(20px); }
+        .header { background: linear-gradient(135deg, #00152b, var(--primary)); color: var(--accent); padding: 35px 20px; text-align: center; border-bottom: 3px solid var(--accent); position: relative; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: 3px; text-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+        .save-indicator { position: absolute; top: 15px; right: 20px; font-size: 11px; background: rgba(212,175,55,0.15); border: 1px solid var(--accent); color: var(--accent); padding: 5px 12px; border-radius: 20px; font-weight: bold; letter-spacing: 1px; backdrop-filter: blur(5px); }
+        
+        .content { padding: 30px 25px; }
+        .section-title { font-size: 17px; color: var(--primary); font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; letter-spacing: 1px; }
+        .section-title::before { content: ''; width: 4px; height: 18px; background: linear-gradient(to bottom, var(--accent), #b48c25); margin-right: 12px; border-radius: 2px; }
+        
+        .card { background: #fff; border: 1px solid rgba(0,46,93,0.06); padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,46,93,0.08); }
+        
+        select, input { padding: 12px 15px; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; margin-top: 8px; transition: all 0.3s; background: #f8fafc; color: var(--text-dark); }
+        select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212,175,55,0.2); background: #fff; }
+        textarea { width: 100%; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical; background-color: #f8fafc; line-height: 1.6; transition: border-color 0.3s; color: var(--text-dark); }
+        textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+        
+        .btn { background: linear-gradient(135deg, var(--primary), #004b99); color: #fff; border: none; padding: 14px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; margin-bottom: 15px; letter-spacing: 1px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,46,93,0.2); }
+        .btn:hover { background: linear-gradient(135deg, #00152b, var(--primary)); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,46,93,0.3); }
+        
+        .editor-row { background: #f8fafc; border-left: 3px solid #e2e8f0; padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 20px; transition: border-color 0.3s, background 0.3s; }
+        .editor-row:hover { border-left-color: var(--accent); background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
+        
+        .id-mapping { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;}
+        .id-mapping div { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .id-mapping input { margin-top: 0; padding: 8px 12px; }
+        @media (max-width: 600px) { .id-mapping, .grid-2 { grid-template-columns: 1fr; } }
+        
+        @keyframes subtle-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes pulse-highlight { 0% { background-color: rgba(212,175,55,0.1); border-color: var(--accent); } 100% { background-color: transparent; border-color: #e2e8f0; } }
+        .bounce-alert { animation: subtle-bounce 0.5s ease 3; border: 1px solid var(--accent) !important; background-color: rgba(212,175,55,0.02) !important; box-shadow: 0 8px 25px rgba(212,175,55,0.15) !important; }
+        .custom-new-id { animation: pulse-highlight 2.5s ease-out forwards; border: 1px dashed var(--accent); border-radius: 8px; padding: 8px; }
+        
+        .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .upload-box { border: 2px dashed rgba(0,46,93,0.2); padding: 15px 10px; border-radius: 10px; text-align: center; background: #f8fafc; transition: all 0.3s; cursor: pointer; }
+        .upload-box:hover { border-color: var(--accent); background: #fff; }
+        .upload-box label { font-size: 13px; font-weight: 600; color: var(--primary); display: block; margin-bottom: 8px; }
+        .upload-box input { font-size: 11px; padding: 0; border: none; background: transparent; width: 100%; color: #666; cursor: pointer; }
+        .upload-box.has-data { border: 2px solid var(--accent); background: rgba(212,175,55,0.05); }
+        @media (max-width: 600px) { .upload-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h1>⛴️ 維港灣畔車位 (VVCP)</h1></div>
+    <div class="content">
+        <div class="card">
+            <div class="section-title">1. 上傳總表 (VVCPPropertySales.xlsx)</div>
+            <input type="file" id="excel-file" accept=".xlsx, .xls, .csv">
+        </div>
+        <div class="card" id="filter-sec" style="display:none;">
+            <label>合約日期 (B欄)：</label><select id="date-select" onchange="processData()"></select>
+        </div>
+        <div class="card" id="editor-sec" style="display:none;">
+            <div class="section-title">2. 車位買家單位及佣金補錄</div>
+            <div id="editor-container"></div>
+        </div>
+        <div id="output-sec" style="display:none;">
+            <div class="card"><div class="section-title">格仔一：當日明細</div><button class="btn" onclick="copy('out1')">複製</button><textarea id="out1" readonly></textarea></div>
+            <div class="card"><div class="section-title">格仔二：銷情數據</div><button class="btn" onclick="copy('out2')">複製</button><textarea id="out2" style="height:350px;" readonly></textarea></div>
+        </div>
+    </div>
+</div>
+<script>
+    let allDeals = [], currentDeals = [], savedSettings = {};
+    const COL = { dt: 1, cp: 19, amt: 21, ag: 36, br: 39 }; // VVCP columns
+
+    window.onload = () => {
+        if(localStorage.getItem('vvcp_data')) {
+            allDeals = JSON.parse(localStorage.getItem('vvcp_data'));
+            savedSettings = JSON.parse(localStorage.getItem('vvcp_set') || '{}');
+            popDates();
+        }
+    };
+
+    function save() {
+        localStorage.setItem('vvcp_data', JSON.stringify(allDeals));
+        localStorage.setItem('vvcp_set', JSON.stringify(savedSettings));
+    }
+
+    document.getElementById('excel-file').addEventListener('change', e => {
+        let reader = new FileReader();
+        reader.onload = ev => {
+            let json = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(ev.target.result), {type: 'array'}).Sheets[XLSX.read(new Uint8Array(ev.target.result), {type: 'array'}).SheetNames[0]], {header: 1, defval: ""});
+            allDeals = [];
+            for(let i=1; i<json.length; i++) {
+                if(!json[i][1] || String(json[i][1]).includes("累售")) break;
+                let r = [];
+                [COL.dt, COL.cp, COL.amt, COL.ag, COL.br].forEach(idx => r[idx] = json[i][idx]);
+                allDeals.push(r);
+            }
+            popDates(); save();
+        };
+        reader.readAsArrayBuffer(e.target.files[0]);
+    });
+
+    function parseDate(v) {
+        if(typeof v === 'number') return new Date(Math.round((v-25569)*86400*1000)).toISOString().split('T')[0];
+        let p = String(v).split(/[-/]/);
+        if(p.length===3) return p[2].length===4 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}` : `${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
+        return v;
+    }
+
+    function popDates() {
+        let s = new Set();
+        allDeals.forEach(r => { r.pDate = parseDate(r[COL.dt]); if(r.pDate) s.add(r.pDate); });
+        let sel = document.getElementById('date-select'); sel.innerHTML = "";
+        Array.from(s).sort().reverse().forEach(d => sel.add(new Option(d, d)));
+        document.getElementById('filter-sec').style.display = 'block';
+        processData();
+    }
+
+    function updateSet(id, k, v) { if(!savedSettings[id]) savedSettings[id]={u:"", c:"1%"}; savedSettings[id][k]=v; gen(); }
+
+    function processData() {
+        let d = document.getElementById('date-select').value; if(!d) return;
+        currentDeals = allDeals.filter(r => r.pDate === d);
+        let h = "";
+        currentDeals.forEach(r => {
+            let cpNum = String(r[COL.cp]).trim();
+            let s = savedSettings[cpNum] || {u:"", c:"1%"};
+            h += `<div class="editor-row"><b>車位：${cpNum}</b>
+            <div class="grid-2">
+                <div><label style="font-size:12px;">住宅單位 (例: T1A-20B)</label><input type="text" value="${s.u}" placeholder="請填寫單位" onchange="updateSet('${cpNum}','u',this.value)"></div>
+                <div><label style="font-size:12px;">佣金</label><input type="text" value="${s.c}" placeholder="例: 1%" onchange="updateSet('${cpNum}','c',this.value)"></div>
+            </div></div>`;
+        });
+        document.getElementById('editor-container').innerHTML = h;
+        document.getElementById('editor-sec').style.display = currentDeals.length ? 'block' : 'none';
+        gen();
+    }
+
+    function isMoto(num) { return String(num).trim().toUpperCase().startsWith('M'); }
+
+    function gen() {
+        let sd = document.getElementById('date-select').value; if(!sd) return;
+        let dobj = new Date(sd), w = isNaN(dobj)?"日":["日","一","二","三","四","五","六"][dobj.getDay()];
+        let shortD = parseInt(sd.split('-')[2]) + '/' + parseInt(sd.split('-')[1]) + '/' + sd.split('-')[0];
+        
+        let st = { today: {p:0, m:0}, yrs: {}, totalAmt: 0 };
+        
+        allDeals.forEach(r => {
+            let yr = r.pDate ? r.pDate.split('-')[0] : "";
+            let cp = String(r[COL.cp]).trim();
+            let amt = parseFloat(String(r[COL.amt]).replace(/,/g,'')) || 0;
+            let m = isMoto(cp);
+            
+            if(!st.yrs[yr]) st.yrs[yr] = { p:0, pA:0, m:0, mA:0 };
+            
+            if(r.pDate === sd) { if(m) st.today.m++; else st.today.p++; }
+            
+            if(m) { st.yrs[yr].m++; st.yrs[yr].mA += amt; } 
+            else { st.yrs[yr].p++; st.yrs[yr].pA += amt; }
+            st.totalAmt += amt;
+        });
+
+        // Block 1
+        let m1 = `維港·灣畔 車位開單 (${shortD}) (${w})\n\n`;
+        let emojis = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"];
+        
+        currentDeals.forEach((r, i) => {
+            let cp = String(r[COL.cp]).trim();
+            let s = savedSettings[cp] || {u:"", c:"1%"};
+            let type = isMoto(cp) ? "電單車位" : "私家車位";
+            let amt = parseFloat(String(r[COL.amt]).replace(/,/g,'')) || 0;
+            let ag = String(r[COL.ag] || "").trim();
+            let br = String(r[COL.br] || "").trim();
+            let emo = i < emojis.length ? emojis[i] : `${i+1}️⃣`;
+            
+            // 灣畔車位格式：冇付款辦法，且單位後緊接車位號碼（如 169私家車位）
+            m1 += `${emo}${s.u}業主選購${cp}${type}\n合額：$${amt.toLocaleString('en-US')}\n代理：${ag} ${br}\n佣金：${s.c}\n\n`;
+        });
+
+        // Block 2
+        let m2 = `維港•灣畔是日累售：\n${st.today.p}個私家車位\n${st.today.m}個電單車位\n\n`;
+        Object.keys(st.yrs).sort().forEach(yr => {
+            let d = st.yrs[yr];
+            if(d.p > 0 || d.m > 0) {
+                m2 += `${yr}年累售：\n私家車位：${d.p}個\n合約額：$${d.pA.toLocaleString('en-US')}\n電單車位：${d.m}個\n合約額：$${d.mA.toLocaleString('en-US')}\n`;
+            }
+        });
+        m2 += `總合約額：$${st.totalAmt.toLocaleString('en-US')}`;
+
+        document.getElementById('out1').value = m1.trim();
+        document.getElementById('out2').value = m2.trim();
+        document.getElementById('output-sec').style.display = 'block';
+        save();
+    }
+    function copy(id) { document.getElementById(id).select(); document.execCommand('copy'); alert('✅ 已複製！'); }
+</script>
+</body>
+</html>

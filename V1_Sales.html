@@ -8,53 +8,59 @@
     <link rel="manifest" href="./manifest.json">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --coli-blue: #002E5D; --coli-gold: #D4AF37; --bg-color: #f4f6f9; }
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-        body { margin: 0; padding: 15px; background: var(--bg-color); color: #333; -webkit-overflow-scrolling: touch; }
-        .container { background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,46,93,0.1); max-width: 850px; margin: 0 auto; overflow: hidden; border: 1px solid rgba(212,175,55,0.3); }
-        .header { background: linear-gradient(135deg, var(--coli-blue), #004b99); color: #fff; padding: 20px; text-align: center; border-bottom: 4px solid var(--coli-gold); position: relative; }
-        .header h1 { margin: 0; font-size: 22px; }
-        .save-indicator { position: absolute; top: 15px; right: 20px; font-size: 11px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 12px; }
-        .content { padding: 20px; }
-        .section-title { font-size: 16px; color: var(--coli-blue); font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; }
-        .section-title::before { content: ''; width: 4px; height: 16px; background: var(--coli-gold); margin-right: 10px; }
-        
-        /* 證件卡片 & 跳動高亮動畫 */
-        .card { background: #fff; border: 1px solid #eee; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s ease; }
-        
-        @keyframes subtle-bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
+        :root {
+            /* 尊貴高尚住宅主題 (Premium Luxury Residential) */
+            --primary: #002E5D; /* 深邃海軍藍 */
+            --accent: #D4AF37; /* 香檳金 */
+            --bg-grad: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            --card-bg: rgba(255, 255, 255, 0.96);
+            --text-dark: #1e293b;
         }
-        @keyframes pulse-highlight {
-            0% { background-color: #fffde7; border-color: var(--coli-gold); }
-            100% { background-color: transparent; border-color: #eee; }
-        }
+        * { box-sizing: border-box; font-family: 'Optima', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { margin: 0; padding: 25px 15px; background: var(--bg-grad); color: var(--text-dark); -webkit-overflow-scrolling: touch; min-height: 100vh; }
+        body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('data:image/svg+xml;utf8,<svg width="40" height="40" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1.2" fill="rgba(212,175,55,0.15)"/></svg>'); z-index: -1; }
         
-        .bounce-alert {
-            animation: subtle-bounce 0.5s ease 3;
-            border: 2px solid var(--coli-gold) !important;
-            background-color: #fffde7 !important;
-            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.2) !important;
-        }
-
-        .id-mapping { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .id-mapping div { display: flex; align-items: center; gap: 5px; font-size: 13px; transition: all 0.5s ease; }
-        .id-mapping input { margin-top: 0; padding: 6px; font-size: 13px; }
+        .container { background: var(--card-bg); border-radius: 16px; box-shadow: 0 25px 50px rgba(0,46,93,0.08), 0 5px 15px rgba(0,0,0,0.05); max-width: 850px; margin: 0 auto; overflow: hidden; border: 1px solid rgba(255,255,255,0.9); backdrop-filter: blur(20px); }
+        .header { background: linear-gradient(135deg, #00152b, var(--primary)); color: var(--accent); padding: 35px 20px; text-align: center; border-bottom: 3px solid var(--accent); position: relative; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: 3px; text-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+        .save-indicator { position: absolute; top: 15px; right: 20px; font-size: 11px; background: rgba(212,175,55,0.15); border: 1px solid var(--accent); color: var(--accent); padding: 5px 12px; border-radius: 20px; font-weight: bold; letter-spacing: 1px; backdrop-filter: blur(5px); }
         
-        /* 全新感應出的項目閃爍提示 */
-        .custom-new-id {
-            animation: pulse-highlight 2s ease-out forwards;
-            border: 1px dashed var(--coli-gold);
-            border-radius: 6px;
-            padding: 4px;
-        }
-
-        select, input { padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; margin-top: 5px; }
-        textarea { width: 100%; height: 350px; padding: 15px; border: 1px solid #eee; border-radius: 6px; font-size: 15px; resize: vertical; background-color: #fafafa; }
-        .btn { background: var(--coli-blue); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px;}
-        .editor-row { border-bottom: 1px dashed #eee; padding-bottom: 15px; margin-bottom: 15px; }
-        @media (max-width: 600px) { .id-mapping { grid-template-columns: 1fr; } }
+        .content { padding: 30px 25px; }
+        .section-title { font-size: 17px; color: var(--primary); font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; letter-spacing: 1px; }
+        .section-title::before { content: ''; width: 4px; height: 18px; background: linear-gradient(to bottom, var(--accent), #b48c25); margin-right: 12px; border-radius: 2px; }
+        
+        .card { background: #fff; border: 1px solid rgba(0,46,93,0.06); padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,46,93,0.08); }
+        
+        select, input { padding: 12px 15px; width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; margin-top: 8px; transition: all 0.3s; background: #f8fafc; color: var(--text-dark); }
+        select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212,175,55,0.2); background: #fff; }
+        textarea { width: 100%; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical; background-color: #f8fafc; line-height: 1.6; transition: border-color 0.3s; color: var(--text-dark); }
+        textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+        
+        .btn { background: linear-gradient(135deg, var(--primary), #004b99); color: #fff; border: none; padding: 14px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; margin-bottom: 15px; letter-spacing: 1px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,46,93,0.2); }
+        .btn:hover { background: linear-gradient(135deg, #00152b, var(--primary)); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,46,93,0.3); }
+        
+        .editor-row { background: #f8fafc; border-left: 3px solid #e2e8f0; padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 20px; transition: border-color 0.3s, background 0.3s; }
+        .editor-row:hover { border-left-color: var(--accent); background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
+        
+        .id-mapping { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;}
+        .id-mapping div { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .id-mapping input { margin-top: 0; padding: 8px 12px; }
+        @media (max-width: 600px) { .id-mapping, .grid-2 { grid-template-columns: 1fr; } }
+        
+        @keyframes subtle-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes pulse-highlight { 0% { background-color: rgba(212,175,55,0.1); border-color: var(--accent); } 100% { background-color: transparent; border-color: #e2e8f0; } }
+        .bounce-alert { animation: subtle-bounce 0.5s ease 3; border: 1px solid var(--accent) !important; background-color: rgba(212,175,55,0.02) !important; box-shadow: 0 8px 25px rgba(212,175,55,0.15) !important; }
+        .custom-new-id { animation: pulse-highlight 2.5s ease-out forwards; border: 1px dashed var(--accent); border-radius: 8px; padding: 8px; }
+        
+        .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .upload-box { border: 2px dashed rgba(0,46,93,0.2); padding: 15px 10px; border-radius: 10px; text-align: center; background: #f8fafc; transition: all 0.3s; cursor: pointer; }
+        .upload-box:hover { border-color: var(--accent); background: #fff; }
+        .upload-box label { font-size: 13px; font-weight: 600; color: var(--primary); display: block; margin-bottom: 8px; }
+        .upload-box input { font-size: 11px; padding: 0; border: none; background: transparent; width: 100%; color: #666; cursor: pointer; }
+        .upload-box.has-data { border: 2px solid var(--accent); background: rgba(212,175,55,0.05); }
+        @media (max-width: 600px) { .upload-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -297,14 +303,20 @@
 
         currentDeals.forEach((r, i) => {
             let u = `${String(r[23]).replace(/Tower [12][AB] of Tower [12]/g, m=>m.substring(0,8).replace("Tower ","T")).replace("Tower ","T").trim()}-${r[24]}${r[25]}`;
-            let s = savedSettings[u] || {m:"招標售出", id:getIDStr(r[5]), us:"自住"};
+            let cm_excel = parseFloat(String(r[52]).replace(/,/g,''))||0;
+            let default_cm = (cm_excel<1&&cm_excel>0) ? (cm_excel*100).toFixed(1)+'%' : cm_excel+'%';
+            let s = savedSettings[u] || {m:"招標售出", id:getIDStr(r[5]), us:"自住", cm: default_cm};
+            let final_cm = s.cm !== undefined ? s.cm : default_cm;
             
             let idOptHtml = idOptions.map(opt => `<option value="${opt}" ${s.id===opt?'selected':''}>${opt}</option>`).join('');
 
-            h += `<div class="editor-row"><b>${u}</b><br>
-            售賣: <select onchange="updateSet('${u}','m',this.value)"><option value="招標售出" ${s.m==='招標售出'?'selected':''}>招標售出</option><option value="價單售出" ${s.m==='價單售出'?'selected':''}>價單售出</option></select>
-            身份: <select onchange="updateSet('${u}','id',this.value)">${idOptHtml}</select>
-            用途: <select onchange="updateSet('${u}','us',this.value)"><option value="自住" ${s.us==='自住'?'selected':''}>自住</option><option value="投資" ${s.us==='投資'?'selected':''}>投資</option></select></div>`;
+            h += `<div class="editor-row"><b style="color:var(--coli-blue); font-size:16px;">${u}</b><br>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
+                <div><label style="font-size:12px;">售賣:</label> <select onchange="updateSet('${u}','m',this.value)"><option value="招標售出" ${s.m==='招標售出'?'selected':''}>招標售出</option><option value="價單售出" ${s.m==='價單售出'?'selected':''}>價單售出</option></select></div>
+                <div><label style="font-size:12px;">身份:</label> <select onchange="updateSet('${u}','id',this.value)">${idOptHtml}</select></div>
+                <div><label style="font-size:12px;">用途:</label> <select onchange="updateSet('${u}','us',this.value)"><option value="自住" ${s.us==='自住'?'selected':''}>自住</option><option value="投資" ${s.us==='投資'?'selected':''}>投資</option></select></div>
+                <div><label style="font-size:12px;">佣金:</label> <input type="text" value="${final_cm}" onchange="updateSet('${u}','cm',this.value)" placeholder="例如: 6.5%"></div>
+            </div></div>`;
         });
         document.getElementById('editor-container').innerHTML = h;
         document.getElementById('editor-sec').style.display = currentDeals.length?'block':'none';
@@ -337,17 +349,20 @@
         
         currentDeals.forEach((r, i) => {
             let u = `${String(r[23]).replace(/Tower [12][AB] of Tower [12]/g, m=>m.substring(0,8).replace("Tower ","T")).replace("Tower ","T").trim()}-${r[24]}${r[25]}`;
-            let s = savedSettings[u] || {m:"招標售出", id:getIDStr(r[5]), us:"自住"};
+            let cm_excel = parseFloat(String(r[52]).replace(/,/g,''))||0; // BA
+            let default_cm = (cm_excel<1&&cm_excel>0) ? (cm_excel*100).toFixed(1)+'%' : cm_excel+'%';
+            let s = savedSettings[u] || {m:"招標售出", id:getIDStr(r[5]), us:"自住", cm: default_cm};
+            let final_cm = s.cm !== undefined ? s.cm : default_cm;
+            
             let sq = parseFloat(String(r[28]).replace(/,/g,''))||0; // AC
             let ps = parseFloat(String(r[29]).replace(/,/g,''))||0; // AD
             let am = parseFloat(String(r[27]).replace(/,/g,''))||0; // AB
-            let cm = parseFloat(String(r[52]).replace(/,/g,''))||0; // BA
             let ag = agInfo(r[46]); // AU
             let emo = i < emojis.length ? emojis[i] : `${i+1}️⃣`;
             let branch = String(r[49] || "").trim(); // AX
             let layout = String(r[26] || "").trim(); // AA
             
-            m1 += `${emo} ${u} （${s.m}）\n實呎 ${sq}’ @$${ps.toLocaleString('en-US')}\n戶型: ${layout}（${s.id}）(${s.us})\n合額：＄${am.toLocaleString('en-US')}\n付款：${r[30]}\n代理：${ag.n.includes('置業')?'港置':ag.n}-${branch}\n佣金：${(cm<1&&cm>0)?(cm*100).toFixed(1)+'%':cm+'%'}\n\n`;
+            m1 += `${emo} ${u} （${s.m}）\n實呎 ${sq}’ @$${Math.round(ps).toLocaleString('en-US')}\n戶型: ${layout}（${s.id}）(${s.us})\n合額：＄${am.toLocaleString('en-US')}\n付款：${r[30]}\n代理：${ag.n.includes('置業')?'港置':ag.n}-${branch}\n佣金：${final_cm}\n\n`;
             
             if(!agG[ag.n]) agG[ag.n] = {h:ag.h, c:0, d:[]};
             agG[ag.n].c++; agG[ag.n].d.push(`${branch}：1 (${u} ${sq}’ ${layout})`); 
