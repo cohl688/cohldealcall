@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="./style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     
     <style>
         .hr-body .hr-section .holiday-check {
@@ -140,6 +141,26 @@
             color: #f0ad4e;
             background: rgba(240, 173, 78, 0.1);
         }
+        .hr-body .pdf-parse-status {
+            margin-top: 6px;
+            font-size: 0.85em;
+            padding: 6px 10px;
+            border-radius: 4px;
+            background: #f0f0f0;
+            border-left: 4px solid #999;
+        }
+        .hr-body .pdf-parse-status.success {
+            border-left-color: #28a745;
+            background: #f0fff0;
+        }
+        .hr-body .pdf-parse-status.error {
+            border-left-color: #d9534f;
+            background: #fff0f0;
+        }
+        .hr-body .pdf-parse-status.info {
+            border-left-color: #f0ad4e;
+            background: #fffcf0;
+        }
     </style>
 </head>
 <body class="hr-body">
@@ -190,20 +211,18 @@
         <h2>📋 人力資源 & 綜合管理</h2>
 
         <div id="globalUpload" class="hr-section" style="border-left-color: #333; background: #f0f0f0;">
-            <label id="rosterUploadLabel">📂 更表 Excel 設定</label>
-            
-            <div id="dbStatus" class="db-status warning">⏳ 檢查數據庫狀態...</div>
+            <label id="rosterUploadLabel">📂 上載更表 PDF</label>
             
             <div class="file-upload-wrapper" id="rosterUploadRow">
-                <input type="file" id="excelFile" accept=".xlsx, .xls">
+                <input type="file" id="pdfFile" accept=".pdf">
                 <div class="upload-actions">
-                    <button class="btn-upload" onclick="triggerFileUpload()">📤 選擇檔案上載</button>
-                    <button class="btn-reset" onclick="resetRoster()">🔄 清除數據重新上載</button>
-                    <button class="btn-fix-db" onclick="fixDatabase()">🔧 修復數據庫</button>
+                    <button class="btn-upload" onclick="triggerPDFUpload()">📤 選擇 PDF 上載</button>
+                    <button class="btn-reset" onclick="resetRoster()">🔄 清除數據（回復內置）</button>
                 </div>
             </div>
             
-            <div id="uploadStatus" style="color:#d9534f; font-size:0.85em; margin-top:5px; font-weight:bold;">⚠️ 未讀取更表數據</div>
+            <div id="pdfStatus" class="pdf-parse-status info">⏳ 請上載 PDF 更表</div>
+            <div id="uploadStatus" style="color:#28a745; font-size:0.85em; margin-top:5px; font-weight:bold;">✅ 目前使用內置更表數據 (2026年7月份)</div>
             <div id="uploadError" style="color:#d9534f; font-size:0.8em; margin-top:4px; display:none;"></div>
         </div>
 
@@ -234,7 +253,7 @@
                 <button class="hr-btn-add" onclick="addFlat('vv')">+ 新增戶型</button>
                 <textarea id="vv_remarks" oninput="handleInput('vv')" style="height: 60px;" placeholder="備註..."></textarea>
             </div>
-            <textarea id="vvResultMessage" class="hr-result-area" readonly placeholder="請先上載 Excel..."></textarea>
+            <textarea id="vvResultMessage" class="hr-result-area" readonly placeholder="請選擇日期..."></textarea>
             <button class="hr-action-btn" onclick="copyToClipboard('vvResultMessage')">📋 複製 (Copy to WhatsApp)</button>
         </div>
 
@@ -259,7 +278,7 @@
                 <button class="hr-btn-add" onclick="addFlat('tv')">+ 新增戶型</button>
                 <textarea id="tv_remarks" oninput="handleInput('tv')" style="height: 60px;" placeholder="備註..."></textarea>
             </div>
-            <textarea id="tvResultMessage" class="hr-result-area" readonly placeholder="請先上載 Excel..."></textarea>
+            <textarea id="tvResultMessage" class="hr-result-area" readonly placeholder="請選擇日期..."></textarea>
             <button class="hr-action-btn" onclick="copyToClipboard('tvResultMessage')">📋 複製 (Copy to WhatsApp)</button>
         </div>
 
@@ -271,9 +290,9 @@
                 <img id="hrLogoPreview" alt="Logo預覽">
             </div>
             <div class="hr-section" style="border-left-color: var(--hr-red);">
-                <label>👤 選擇員工 (由 Excel 自動讀取):</label>
+                <label>👤 選擇員工 (由 PDF 自動讀取):</label>
                 <select id="hrEmployeeSelect" onchange="loadEmployeeData()">
-                    <option value="">-- 請先上載 Excel --</option>
+                    <option value="">-- 請先上載 PDF --</option>
                 </select>
                 <div class="hr-flex-row">
                     <div><span>職位:</span><input type="text" id="hrPosition" oninput="saveEmployeeData()" placeholder="如: 高級銷售主任"></div>
@@ -311,11 +330,21 @@
             '2026-12-25', '2026-12-26'
         ];
 
-        function isHKHoliday(dateStr) { return HK_HOLIDAYS.includes(dateStr); }
-        function isWeekend(dateStr) { const d = new Date(dateStr); return d.getDay() === 0 || d.getDay() === 6; }
+        function isHKHoliday(dateStr) {
+            return HK_HOLIDAYS.includes(dateStr);
+        }
+
+        function isWeekend(dateStr) {
+            const d = new Date(dateStr);
+            const day = d.getDay();
+            return day === 0 || day === 6;
+        }
+
         function isHoliday(dateStr, manualCheckboxId) {
             const manualCheckbox = document.getElementById(manualCheckboxId);
-            if (manualCheckbox && manualCheckbox.checked) return true;
+            if (manualCheckbox && manualCheckbox.checked) {
+                return true;
+            }
             return isWeekend(dateStr) || isHKHoliday(dateStr);
         }
 
@@ -323,230 +352,322 @@
         // 語言切換
         // ==========================================
         const translations = {
-            'zh-HK': { 'nav_home': '主頁','nav_residential': '住宅','nav_carpark': '車位','nav_tools': '使用小工具','nav_runway': '📊 報每日跑道區成交','nav_hr': '人力資源', 'nav_v1': '維港1號','nav_vd': '維港雙鑽','nav_vv': '維港灣畔', 'nav_ovcp': '維港1號車位','nav_tvcp': '維港雙鑽車位','nav_vvcp': '維港灣畔車位', 'footer_home': '主頁','footer_website': '官方網站' },
-            'zh-CN': { 'nav_home': '主页','nav_residential': '住宅','nav_carpark': '车位','nav_tools': '使用小工具','nav_runway': '📊 报每日跑道区成交','nav_hr': '人力资源', 'nav_v1': '维港1号','nav_vd': '维港双钻','nav_vv': '维港湾畔', 'nav_ovcp': '维港1号车位','nav_tvcp': '维港双钻车位','nav_vvcp': '维港湾畔车位', 'footer_home': '主页','footer_website': '官方网站' },
-            'en': { 'nav_home': 'Home','nav_residential': 'Residential','nav_carpark': 'Carpark','nav_tools': 'Tools','nav_runway': '📊 Daily Runway Transactions','nav_hr': 'HR', 'nav_v1': 'One Victoria','nav_vd': 'Twin Victoria','nav_vv': 'Victoria Voyage', 'nav_ovcp': 'One Victoria Carpark','nav_tvcp': 'Twin Victoria Carpark','nav_vvcp': 'Victoria Voyage Carpark', 'footer_home': 'Home','footer_website': 'Official Website' }
+            'zh-HK': {
+                'nav_home': '主頁','nav_residential': '住宅','nav_carpark': '車位','nav_tools': '使用小工具','nav_runway': '📊 報每日跑道區成交','nav_hr': '人力資源',
+                'nav_v1': '維港1號','nav_vd': '維港雙鑽','nav_vv': '維港灣畔',
+                'nav_ovcp': '維港1號車位','nav_tvcp': '維港雙鑽車位','nav_vvcp': '維港灣畔車位',
+                'footer_home': '主頁','footer_website': '官方網站'
+            },
+            'zh-CN': {
+                'nav_home': '主页','nav_residential': '住宅','nav_carpark': '车位','nav_tools': '使用小工具','nav_runway': '📊 报每日跑道区成交','nav_hr': '人力资源',
+                'nav_v1': '维港1号','nav_vd': '维港双钻','nav_vv': '维港湾畔',
+                'nav_ovcp': '维港1号车位','nav_tvcp': '维港双钻车位','nav_vvcp': '维港湾畔车位',
+                'footer_home': '主页','footer_website': '官方网站'
+            },
+            'en': {
+                'nav_home': 'Home','nav_residential': 'Residential','nav_carpark': 'Carpark','nav_tools': 'Tools','nav_runway': '📊 Daily Runway Transactions','nav_hr': 'HR',
+                'nav_v1': 'One Victoria','nav_vd': 'Twin Victoria','nav_vv': 'Victoria Voyage',
+                'nav_ovcp': 'One Victoria Carpark','nav_tvcp': 'Twin Victoria Carpark','nav_vvcp': 'Victoria Voyage Carpark',
+                'footer_home': 'Home','footer_website': 'Official Website'
+            }
         };
 
         function switchLang(lang) {
             localStorage.setItem('cohl_lang', lang);
-            document.querySelectorAll('.lang-toggle button').forEach(btn => { btn.classList.toggle('active-lang', btn.dataset.lang === lang); });
+            document.querySelectorAll('.lang-toggle button').forEach(btn => {
+                btn.classList.toggle('active-lang', btn.dataset.lang === lang);
+            });
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.dataset.i18n;
-                if (translations[lang] && translations[lang][key]) el.textContent = translations[lang][key];
-            });
-        }
-
-        // ==========================================
-        // IndexedDB - 穩定版
-        // ==========================================
-        const DB_NAME = "ColiAppDB";
-        const STORE_ROSTER = "RosterStore";
-        const DB_VERSION = 4;
-
-        function openDB() {
-            return new Promise((resolve, reject) => {
-                const req = indexedDB.open(DB_NAME, DB_VERSION);
-                req.onupgradeneeded = (e) => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains(STORE_ROSTER)) {
-                        db.createObjectStore(STORE_ROSTER, { keyPath: "id" });
-                    }
-                };
-                req.onsuccess = (e) => { resolve(e.target.result); };
-                req.onerror = (e) => { reject(e.target.error); };
-            });
-        }
-
-        async function checkDBStatus() {
-            const statusEl = document.getElementById('dbStatus');
-            try {
-                const db = await openDB();
-                if (db.objectStoreNames.contains(STORE_ROSTER)) {
-                    statusEl.textContent = '✅ 數據庫狀態正常 (RosterStore 已就緒)';
-                    statusEl.className = 'db-status success';
-                } else {
-                    statusEl.textContent = '⚠️ RosterStore 不存在，請點擊「修復數據庫」';
-                    statusEl.className = 'db-status warning';
+                if (translations[lang] && translations[lang][key]) {
+                    el.textContent = translations[lang][key];
                 }
-                db.close();
-                return true;
-            } catch (e) {
-                statusEl.textContent = '❌ 數據庫錯誤: ' + e.message;
-                statusEl.className = 'db-status error';
-                return false;
-            }
+            });
         }
-
-        async function fixDatabase() {
-            if (!confirm("此操作將刪除所有更表數據並重建數據庫，確定繼續嗎？")) return;
-            const statusEl = document.getElementById('dbStatus');
-            statusEl.textContent = '⏳ 正在修復數據庫...';
-            statusEl.className = 'db-status warning';
-            try {
-                const db = await openDB(); db.close();
-                await new Promise((resolve, reject) => { const req = indexedDB.deleteDatabase(DB_NAME); req.onsuccess = () => resolve(); req.onerror = () => reject(req.error); });
-                const newDb = await openDB(); newDb.close();
-                rosterData = []; staffData = []; dayColMap = {};
-                document.getElementById('uploadStatus').innerText = "⚠️ 數據庫已重建，請重新上載更表";
-                document.getElementById('uploadStatus').style.color = "#d9534f";
-                document.getElementById('excelFile').value = '';
-                document.getElementById('hrEmployeeSelect').innerHTML = '<option value="">-- 請先上載 Excel --</option>';
-                document.getElementById('vvResultMessage').value = '請先上載 Excel...';
-                document.getElementById('tvResultMessage').value = '請先上載 Excel...';
-                document.getElementById('uploadError').style.display = 'none';
-                statusEl.textContent = '✅ 數據庫已重建成功！請重新上載更表';
-                statusEl.className = 'db-status success';
-                alert('✅ 數據庫已成功修復！請重新上載更表 Excel。');
-            } catch (e) {
-                statusEl.textContent = '❌ 修復失敗: ' + e.message;
-                statusEl.className = 'db-status error';
-                alert('❌ 修復失敗，請嘗試清除瀏覽器數據或使用其他瀏覽器。\n錯誤: ' + e.message);
-            }
-        }
-
-        async function saveDataToDB(storeName, dataId, data) {
-            try {
-                const db = await openDB();
-                return new Promise((resolve, reject) => {
-                    const tx = db.transaction([storeName], "readwrite");
-                    const store = tx.objectStore(storeName);
-                    store.put({ id: dataId, data: data });
-                    tx.oncomplete = () => { db.close(); resolve(); };
-                    tx.onerror = () => { db.close(); reject(tx.error); };
-                });
-            } catch(e) { console.error("DB Save Error", e); throw e; }
-        }
-
-        async function loadDataFromDB(storeName, dataId) {
-            try {
-                const db = await openDB();
-                return new Promise((resolve, reject) => {
-                    const tx = db.transaction([storeName], "readonly");
-                    const store = tx.objectStore(storeName);
-                    const req = store.get(dataId);
-                    req.onsuccess = () => { db.close(); resolve(req.result ? req.result.data : null); };
-                    req.onerror = () => { db.close(); reject(req.error); };
-                });
-            } catch(e) { console.error("DB Load Error", e); return null; }
-        }
-
-        function resetRoster() {
-            if(confirm("確定要清除現有更表數據並重新上載嗎？")) {
-                rosterData = []; staffData = []; dayColMap = {};
-                document.getElementById('uploadStatus').innerText = "⚠️ 數據已清除，請重新選擇檔案上載";
-                document.getElementById('uploadStatus').style.color = "#d9534f";
-                document.getElementById('uploadError').style.display = 'none';
-                document.getElementById('excelFile').value = '';
-                openDB().then(db => {
-                    if (db.objectStoreNames.contains(STORE_ROSTER)) {
-                        const tx = db.transaction([STORE_ROSTER], "readwrite");
-                        tx.objectStore(STORE_ROSTER).delete("rosterData");
-                        tx.oncomplete = () => { db.close(); };
-                    } else { db.close(); }
-                }).catch(() => {});
-                document.getElementById('hrEmployeeSelect').innerHTML = '<option value="">-- 請先上載 Excel --</option>';
-                document.getElementById('vvResultMessage').value = '請先上載 Excel...';
-                document.getElementById('tvResultMessage').value = '請先上載 Excel...';
-                checkDBStatus();
-            }
-        }
-
-        function triggerFileUpload() { document.getElementById('excelFile').click(); }
 
         // ==========================================
-        // 核心變數與功能 - 重構 AI 解析器
+        // 內置更表數據（fallback）
         // ==========================================
-        let rosterData = []; 
-        let rosterYear = ""; let rosterMonth = ""; let daysInMonth = 31;
+        const builtInRoster = [
+            ['售樓處員工值勤表(第五版)'],
+            ['2026年7月份'],
+            ['值勤地點', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31'],
+            ['星期', '三', '四', '五', '六', '日', '一', '二', '三', '四', '五', '六', '日', '一', '二', '三', '四', '五', '六', '日', '一', '二', '三', '四', '五', '六', '日', '一', '二', '三', '四', '五'],
+            ['姓名', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['Moon Tsang', '(MT)', 'TV/ F', 'TV', '▲', 'F', '▲', 'TV', 'TV', '▲', 'TV', 'TV', '▲', 'TV', 'F', '▲', 'TV', 'F', '▲', 'TV', 'TV', '▲', 'TV', 'TV', '▲', 'F', 'TV', '▲', 'TV', 'TV', '■', '■', 'F', 'EL'],
+            ['Joe Mok', '(JM)', 'VV', '■', '■', '■', '▲', '▲', '■', '■', 'CL', 'VV', '▲', 'VV', '■', '▲', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', '▲', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', '▲'],
+            ['Andrew Leung', '(AL)', 'TV', 'TV', 'TV', 'TV', '✽', '▲', 'TV', 'TV', 'TV', '✽', 'TV', '▲', 'TV', '▲', 'TV', 'TV', '▲', '▲', 'TV', 'TV', 'TV', 'TV', '▲', 'TV', 'TV', 'TV', '▲', 'TV', 'TV', '▲', 'TV', 'TV'],
+            ['Ankie Mak', '(AM)', 'TV / VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'TV', '▲', 'VV', 'VV', 'VV', '▲', 'TV', 'TV', '▲', 'VV', 'TV', '▲', 'VV', 'TV', '▲', 'VV', 'VV', 'TV', '▲', '▲', 'VV', 'VV', 'VV'],
+            ['Eric Chan', '(EC)', 'TV / VV', '▲', 'K', 'K', 'VV', 'VV', '▲', 'VV', '▲', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'FL', 'FL', '▲', 'VV', 'VV', 'VV', 'VV', 'VV', '▲', 'VV', '▲', '▲', 'VV', 'VV'],
+            ['Stephen Chan', '(SC)', 'TV / VV', '▲', '▲', 'TV', 'TV', 'VV', 'VV', 'TV', '▲', '▲', 'TV', 'TV', 'TV', 'TV', 'VV', '▲', 'TV', 'TV', '▲', 'VV', '▲', '▲', 'TV', 'TV', 'VV', 'TV', '▲', 'VV', 'VV', 'TV', 'TV', 'TV'],
+            ['Peter Hung', '(PH)', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', 'VV'],
+            ['Sammi Cheung', '(SC)', 'VV', 'VV', 'VV', '▲', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'VV', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', '▲', 'VV', 'VV', '▲', 'VV', 'VV', 'VV'],
+            ['Renne Lai', '(RL)', 'VV', '▲', '▲', 'VV', '★', 'VV', '▲', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', '', '', '', '', '', '', ''],
+            ['Karina Lau', '(KL)', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', '▲', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', '▲', 'VV', 'VV']
+        ];
+
+        // 銷售人員名單（英文名）
+        const salesPool = ["Moon", "Joe", "Andrew", "Ankie", "Eric", "Stephen", "Peter"];
+        const internPool = ["Sammi", "Karina", "Renne"];
+
+        // ==========================================
+        // 核心功能
+        // ==========================================
+        let rosterData = builtInRoster.slice(); // 複製一份
+        let rosterYear = "2026"; 
+        let rosterMonth = "7"; 
+        let daysInMonth = 31;
+        let employeeList = []; 
         let savedLogoBase64 = "";
+        let vvFlats = [], tvFlats = [];
 
         const WORK_LOCATIONS = { 'C': { time: '09:00–17:30', desc: '公司(PP3)' }, 'OV': { time: '10:30–19:00', desc: '維港1號(現樓)' }, 'K': { time: '10:30–19:00', desc: '九龍灣國際交易中心' }, 'F': { time: '10:30–19:00', desc: '飛鵝山道3號(現樓)' }, 'TV': { time: '10:30–19:00', desc: '維港．雙鑽(現樓)' }, 'VV': { time: '10:30–19:00', desc: '維港‧灣畔(現樓)' }, 'VW': { time: '10:30–19:00', desc: '維港‧灣畔(現樓)' } };
         const EXACT_LEAVE_TYPES = { 'FL':'喪假', 'Q':'居家隔離', 'ML':'產假', 'PL':'侍產假', 'M':'婚假', 'BL':'生日假', 'CL':'關懷假', 'VL':'義工補假', 'V':'疫苗假', 'WFH':'在家工作', 'JSL':'陪審員假', 'EL':'額外假期', 'SL':'進修假', 'NPL':'無薪假', '/':'半天假' };
         const SYMBOL_LEAVE_TYPES = { '▲':'例假', '✽':'補假', '●':'超時工作補假', '★':'病假', '■':'年假', '◎':'事假' };
-        
-        const salesPool = ["Moon", "Joe", "Andrew", "Ankie", "Eric", "Stephen", "Peter"];
-        const internPool = ["Sammi", "Karina", "Renne"];
-        
+
         const defaultVVFlats = [ { label: "1房", value: "T1A-17C" }, { label: "2房（開廚）", value: "T1A-17D, T1A-17E, T1B-17B" }, { label: "2房（梗廚）", value: "T1C-17G" }, { label: "2房+儲物房（梗廚）", value: "T1B-17A, T2A-17A, T2B-17J, T2A-17J" }, { label: "3房1套（開廚）", value: "T5B-17B" }, { label: "3房1套+工作間連洗手間", value: "*T1A-17A, T1A-17B, T5B-17A" } ];
         const defaultTVFlats = [ { label: "開放式", value: "T2A-21C" }, { label: "2房開廚", value: "T1A-21F, T2A-21A, T2B-21D" }, { label: "2房梗廚", value: "T1B-21H, T2A-21G, T2B-21E" }, { label: "3房1套(儲)", value: "#T2B-21G" }, { label: "3房1套(連工人套)", value: "*T2B-21F" } ];
-        let vvFlats = [], tvFlats = [];
-
-        // 新增智能資料陣列
-        let dayColMap = {}; // 例如: { 1: 2, 2: 3, 3: 4... } 記錄每日對應的 Excel 欄位索引
-        let staffData = []; // 記錄成功解析的員工: { id: "Moon", rawName: "姓名 Moon Tsang (MT)", rowIdx: 5 }
 
         // ==========================================
-        // 核心 AI 解析引擎
+        // PDF 解析函數
         // ==========================================
-        function processRosterData() {
-            dayColMap = {};
-            staffData = [];
-            
-            if (!rosterData || rosterData.length === 0) return;
+        async function parsePDF(pdfData) {
+            const statusEl = document.getElementById('pdfStatus');
+            statusEl.className = 'pdf-parse-status info';
+            statusEl.textContent = '⏳ 正在解析 PDF，請稍候...';
 
-            // 1. 智能尋找「日期行」(掃描頭 15 行)
-            for (let i = 0; i < Math.min(15, rosterData.length); i++) {
-                let row = rosterData[i];
-                if (!row) continue;
-                
-                let tempMap = {};
-                let foundDays = 0;
-                
-                for (let j = 0; j < row.length; j++) {
-                    let val = String(row[j]).trim();
-                    // 如果呢格係 1-31 嘅純數字
-                    if (/^([1-9]|[12][0-9]|3[01])$/.test(val)) {
-                        tempMap[parseInt(val)] = j;
-                        foundDays++;
-                    }
-                }
-                
-                // 如果一行入面搵到超過 20 個數字，肯定係日期嗰行，將 Map 記錄低
-                if (foundDays >= 20) {
-                    dayColMap = tempMap;
-                    break; 
-                }
-            }
+            try {
+                const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+                const numPages = pdf.numPages;
+                let allTextItems = [];
 
-            // 2. 智能尋找「員工行」
-            const combinedPool = [...salesPool, ...internPool];
-            for (let i = 0; i < rosterData.length; i++) {
-                let row = rosterData[i];
-                if (!row) continue;
-                
-                // 掃描頭 5 個 Columns 去搵人名，解決人名唔喺第一欄嘅問題
-                for (let c = 0; c < Math.min(5, row.length); c++) {
-                    let cellText = String(row[c]).toUpperCase();
+                // 提取所有頁面的文字和位置
+                for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: 1 });
+                    const textContent = await page.getTextContent();
                     
-                    // 從名單中比對
-                    let matchedName = combinedPool.find(name => cellText.includes(name.toUpperCase()));
-                    
-                    // 確保搵到名，而且唔係標題列 (例如唔包含'姓名'、'日期'等字眼，但如果格入面有"姓名 Moon"就要容許，所以用 matchedName 雙重確認)
-                    if (matchedName && !cellText.includes('期:') && !cellText.includes('月份')) {
-                        staffData.push({
-                            id: matchedName, 
-                            rawName: String(row[c]).trim().replace(/\n/g, ' '), // 留低原名畀 HR 出勤表用
-                            rowIdx: i
+                    // 轉換成 { text, x, y, width, height }
+                    for (let item of textContent.items) {
+                        allTextItems.push({
+                            text: item.str.trim(),
+                            x: item.transform[4],
+                            y: viewport.height - item.transform[5], // PDF 座標原點在左下角，轉為左上角
+                            width: item.width,
+                            height: item.height
                         });
-                        break; // 搵到就跳去下一行
                     }
                 }
+
+                // 按 Y 座標排序（由上到下）
+                allTextItems.sort((a, b) => a.y - b.y || a.x - b.x);
+
+                // 合併同一行（Y 座標差距小於 5）
+                const lines = [];
+                let currentLine = [];
+                let currentY = null;
+                const Y_THRESHOLD = 5;
+
+                for (let item of allTextItems) {
+                    if (!item.text) continue;
+                    if (currentY === null || Math.abs(item.y - currentY) < Y_THRESHOLD) {
+                        currentLine.push(item);
+                        currentY = item.y;
+                    } else {
+                        if (currentLine.length > 0) {
+                            lines.push(currentLine);
+                        }
+                        currentLine = [item];
+                        currentY = item.y;
+                    }
+                }
+                if (currentLine.length > 0) lines.push(currentLine);
+
+                // 將每一行轉為文字陣列（按 X 排序）
+                const textLines = lines.map(line => {
+                    line.sort((a, b) => a.x - b.x);
+                    return line.map(item => item.text);
+                });
+
+                // 搵出員工數據嘅起始行（包含括號嘅行）
+                let startRow = -1;
+                for (let i = 0; i < textLines.length; i++) {
+                    let row = textLines[i];
+                    if (!row || row.length === 0) continue;
+                    // 檢查是否包含括號
+                    for (let cell of row) {
+                        if (cell.includes('(') || cell.includes('（')) {
+                            startRow = i;
+                            break;
+                        }
+                    }
+                    if (startRow !== -1) break;
+                }
+
+                if (startRow === -1) {
+                    statusEl.className = 'pdf-parse-status error';
+                    statusEl.textContent = '❌ 無法辨識員工數據，請確認 PDF 格式正確。';
+                    return false;
+                }
+
+                // 開始構建 rosterData
+                const newRoster = [];
+                // 加入標題行（從內置複製）
+                newRoster.push(['售樓處員工值勤表(第五版)']);
+                newRoster.push(['2026年7月份']);
+                // 建立日期行（1-31）
+                const dateRow = ['值勤地點'];
+                for (let d = 1; d <= 31; d++) dateRow.push(String(d));
+                newRoster.push(dateRow);
+                // 星期行（按實際 PDF 內容，需要推算，暫時用內置）
+                const weekRow = ['星期', '三', '四', '五', '六', '日', '一', '二', '三', '四', '五', '六', '日', '一', '二', '三', '四', '五', '六', '日', '一', '二', '三', '四', '五', '六', '日', '一', '二', '三', '四', '五'];
+                newRoster.push(weekRow);
+                newRoster.push(['姓名', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+
+                // 提取員工數據
+                for (let i = startRow; i < textLines.length; i++) {
+                    let row = textLines[i];
+                    if (!row || row.length === 0) continue;
+                    // 合併第一個欄位（可能姓名和括號分開）
+                    let fullName = '';
+                    let bracket = '';
+                    let dataCells = [];
+                    // 嘗試將 row[0] + row[1] 組合成姓名
+                    let namePart = row[0] || '';
+                    let bracketPart = row[1] || '';
+                    if (bracketPart.includes('(') || bracketPart.includes('（')) {
+                        fullName = namePart + ' ' + bracketPart;
+                        dataCells = row.slice(2);
+                    } else {
+                        // 可能姓名和括號在同一格
+                        fullName = row[0] || '';
+                        dataCells = row.slice(1);
+                    }
+                    // 檢查是否為有效員工（姓名包含括號或 row[1] 包含括號）
+                    if (!fullName.includes('(') && !fullName.includes('（') && !bracketPart.includes('(') && !bracketPart.includes('（')) {
+                        // 跳過非員工行
+                        continue;
+                    }
+                    // 去除多餘空格
+                    fullName = fullName.trim();
+                    // 只保留前 31 個數據（對應 1-31 日）
+                    const dayData = dataCells.slice(0, 31).map(cell => cell || '');
+                    // 插入新行
+                    const newRow = [fullName, '', ...dayData];
+                    newRoster.push(newRow);
+                }
+
+                // 檢查是否成功解析到員工
+                if (newRoster.length <= 5) {
+                    statusEl.className = 'pdf-parse-status error';
+                    statusEl.textContent = '❌ 未能從 PDF 提取員工數據，請檢查 PDF 格式。';
+                    return false;
+                }
+
+                // 更新 rosterData
+                rosterData = newRoster;
+                // 更新年月
+                const monthMatch = rosterData[1] && rosterData[1][0] ? rosterData[1][0].match(/(\d{4})年(\d{1,2})月份/) : null;
+                if (monthMatch) {
+                    rosterYear = monthMatch[1];
+                    rosterMonth = monthMatch[2];
+                    daysInMonth = new Date(rosterYear, rosterMonth, 0).getDate();
+                }
+
+                statusEl.className = 'pdf-parse-status success';
+                statusEl.textContent = `✅ PDF 解析成功！共載入 ${newRoster.length - 5} 位員工數據。`;
+                document.getElementById('uploadStatus').innerText = `✅ 已從 PDF 載入更表數據 (${rosterYear}年${rosterMonth}月份)`;
+                document.getElementById('uploadStatus').style.color = "#28a745";
+                
+                // 更新 HR dropdown
+                populateEmployeeDropdown();
+                // 重新生成訊息
+                generateMessage('vv');
+                generateMessage('tv');
+                return true;
+
+            } catch (err) {
+                console.error('PDF 解析錯誤:', err);
+                statusEl.className = 'pdf-parse-status error';
+                statusEl.textContent = '❌ PDF 解析失敗: ' + err.message;
+                return false;
             }
         }
 
+        // ==========================================
+        // UI 控制
+        // ==========================================
+        function triggerPDFUpload() {
+            document.getElementById('pdfFile').click();
+        }
+
+        document.getElementById('pdfFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const statusEl = document.getElementById('pdfStatus');
+            const errorEl = document.getElementById('uploadError');
+            errorEl.style.display = 'none';
+
+            if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+                errorEl.textContent = '❌ 請上載 .pdf 格式檔案';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const pdfData = new Uint8Array(e.target.result);
+                    const success = await parsePDF(pdfData);
+                    if (success) {
+                        alert('✅ PDF 更表上載成功！');
+                    }
+                } catch (err) {
+                    statusEl.className = 'pdf-parse-status error';
+                    statusEl.textContent = '❌ 讀取 PDF 失敗: ' + err.message;
+                }
+            };
+            reader.onerror = function() {
+                statusEl.className = 'pdf-parse-status error';
+                statusEl.textContent = '❌ 無法讀取檔案';
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function resetRoster() {
+            if (confirm("確定要清除 PDF 數據，回復為內置更表嗎？")) {
+                rosterData = builtInRoster.slice();
+                rosterYear = "2026";
+                rosterMonth = "7";
+                daysInMonth = 31;
+                document.getElementById('pdfStatus').className = 'pdf-parse-status info';
+                document.getElementById('pdfStatus').textContent = '⏳ 已回復內置更表數據 (2026年7月份)';
+                document.getElementById('uploadStatus').innerText = '✅ 目前使用內置更表數據 (2026年7月份)';
+                document.getElementById('uploadStatus').style.color = "#28a745";
+                document.getElementById('pdfFile').value = '';
+                populateEmployeeDropdown();
+                generateMessage('vv');
+                generateMessage('tv');
+                alert('✅ 已回復內置更表數據！');
+            }
+        }
+
+        // ==========================================
+        // 核心功能（與之前類似，但使用 rosterData）
+        // ==========================================
         function updateHolidayHint(type) {
             const dateInput = document.getElementById(`${type}DutyDate`);
             const hintEl = document.getElementById(`${type}HolidayHint`);
             const manualCheckbox = document.getElementById(`${type}ManualHoliday`);
             if (!dateInput || !dateInput.value || !hintEl) return;
             const dateStr = dateInput.value;
-            const isHolidayDay = isHKHoliday(dateStr);
+            const isHoliday = isHKHoliday(dateStr);
             const isWeekendDay = isWeekend(dateStr);
             if (manualCheckbox && manualCheckbox.checked) {
                 hintEl.textContent = '📌 手動設為假日';
                 hintEl.style.color = '#e60012';
-            } else if (isHolidayDay) {
+            } else if (isHoliday) {
                 hintEl.textContent = '🇭🇰 法定假期';
                 hintEl.style.color = '#2da44e';
             } else if (isWeekendDay) {
@@ -558,36 +679,14 @@
             }
         }
 
-        window.onload = async function() { 
+        window.onload = function() { 
             document.getElementById('vvDutyDate').valueAsDate = new Date(); 
             document.getElementById('tvDutyDate').valueAsDate = new Date(); 
             loadSettings(); 
             
-            await checkDBStatus();
-            
-            try {
-                const savedRoster = await loadDataFromDB(STORE_ROSTER, "rosterData");
-                if (savedRoster && savedRoster.length > 0) {
-                    rosterData = savedRoster;
-                    document.getElementById('uploadStatus').innerText = `✅ 更表數據庫已永久內置 (${rosterData.length} 行數據)`;
-                    document.getElementById('uploadStatus').style.color = "#28a745";
-                    
-                    if (rosterData[1] && rosterData[1][0]) { const match = rosterData[1][0].match(/(\d{4})年(\d{1,2})月份/); if (match) { rosterYear = match[1]; rosterMonth = match[2]; daysInMonth = new Date(rosterYear, rosterMonth, 0).getDate(); } }
-                    
-                    processRosterData(); // 呼叫 AI 解析引擎
-                    populateEmployeeDropdown(); 
-                    generateMessage('vv'); 
-                    generateMessage('tv'); 
-                } else {
-                    document.getElementById('uploadStatus').innerText = "⚠️ 未讀取更表數據，請上載 Excel";
-                    document.getElementById('uploadStatus').style.color = "#d9534f";
-                }
-            } catch (e) {
-                document.getElementById('uploadStatus').innerText = "⚠️ 讀取數據庫失敗，請點擊「修復數據庫」後重新上載";
-                document.getElementById('uploadStatus').style.color = "#d9534f";
-                document.getElementById('uploadError').textContent = '錯誤: ' + e.message;
-                document.getElementById('uploadError').style.display = 'block';
-            }
+            populateEmployeeDropdown(); 
+            generateMessage('vv'); 
+            generateMessage('tv'); 
             
             updateHolidayHint('vv');
             updateHolidayHint('tv');
@@ -605,18 +704,18 @@
         function loadSettings() {
             savedLogoBase64 = localStorage.getItem('hr_logo_base64');
             if(savedLogoBase64) { document.getElementById('hrLogoPreview').src = savedLogoBase64; document.getElementById('hrLogoPreview').style.display = 'block'; }
-            document.getElementById('vvWeekdayAmb').value = localStorage.getItem('vv_wk_amb_v17') || "15"; 
-            document.getElementById('vvHolidayAmb').value = localStorage.getItem('vv_hol_amb_v17') || "16";
+            document.getElementById('vvWeekdayAmb').value = localStorage.getItem('vv_wk_amb_v15') || "15"; 
+            document.getElementById('vvHolidayAmb').value = localStorage.getItem('vv_hol_amb_v15') || "16";
             document.getElementById('vvManualHoliday').checked = localStorage.getItem('vv_manual_holiday') === 'true';
             document.getElementById('tvManualHoliday').checked = localStorage.getItem('tv_manual_holiday') === 'true';
             
-            vvFlats = JSON.parse(localStorage.getItem('vv_flats_v17')) || JSON.parse(JSON.stringify(defaultVVFlats)); 
-            document.getElementById('vv_remarks').value = localStorage.getItem('vv_remarks_v17') || "#為已裝飾無改動示範單位\n*為已裝飾有改動示範單位\n\n示位單位狀況大致良好，均達開放標準。";
+            vvFlats = JSON.parse(localStorage.getItem('vv_flats_v15')) || JSON.parse(JSON.stringify(defaultVVFlats)); 
+            document.getElementById('vv_remarks').value = localStorage.getItem('vv_remarks_v15') || "#為已裝飾無改動示範單位\n*為已裝飾有改動示範單位\n\n示位單位狀況大致良好，均達開放標準。";
             
-            document.getElementById('tvWeekdayAmb').value = localStorage.getItem('tv_wk_amb_v17') || "3"; 
-            document.getElementById('tvHolidayAmb').value = localStorage.getItem('tv_hol_amb_v17') || "4";
-            tvFlats = JSON.parse(localStorage.getItem('tv_flats_v17')) || JSON.parse(JSON.stringify(defaultTVFlats)); 
-            document.getElementById('tv_remarks').value = localStorage.getItem('tv_remarks_v17') || "#為已裝飾無改動示範單位\n*為已裝飾有改動示範單位\n\n示位單位狀況大致良好，均達開放標準。";
+            document.getElementById('tvWeekdayAmb').value = localStorage.getItem('tv_wk_amb_v15') || "3"; 
+            document.getElementById('tvHolidayAmb').value = localStorage.getItem('tv_hol_amb_v15') || "4";
+            tvFlats = JSON.parse(localStorage.getItem('tv_flats_v15')) || JSON.parse(JSON.stringify(defaultTVFlats)); 
+            document.getElementById('tv_remarks').value = localStorage.getItem('tv_remarks_v15') || "#為已裝飾無改動示範單位\n*為已裝飾有改動示範單位\n\n示位單位狀況大致良好，均達開放標準。";
             
             renderFlats('vv'); 
             renderFlats('tv');
@@ -644,137 +743,132 @@
                     <button class="hr-btn-del" onclick="deleteFlat('${type}', ${index})">刪</button>
                 </div>`; 
             });
-            setTimeout(() => { initSortable(type); }, 50);
+            setTimeout(() => {
+                initSortable(type);
+            }, 50);
             generateMessage(type); 
         }
 
         function initSortable(type) { 
             const container = document.getElementById(`${type}FlatsContainer`);
             if (!container) return;
-            if (container._sortable) { container._sortable.destroy(); }
+            if (container._sortable) {
+                container._sortable.destroy();
+            }
             container._sortable = new Sortable(container, { 
-                handle: '.hr-drag-handle', animation: 150, forceFallback: true, fallbackTolerance: 3, touchStartThreshold: 2,
+                handle: '.hr-drag-handle', 
+                animation: 150,
+                forceFallback: true,
+                fallbackTolerance: 3,
+                touchStartThreshold: 2,
                 onEnd: function (evt) { 
                     const arr = type === 'vv' ? vvFlats : tvFlats; 
                     const item = arr.splice(evt.oldIndex, 1)[0]; 
                     arr.splice(evt.newIndex, 0, item); 
-                    saveSettings(type); renderFlats(type); 
+                    saveSettings(type); 
+                    renderFlats(type); 
                 } 
             }); 
         }
 
-        function addFlat(type) { (type === 'vv') ? vvFlats.push({ label: "", value: "" }) : tvFlats.push({ label: "", value: "" }); renderFlats(type); saveSettings(type); }
-        function updateFlat(type, index, field, value) { (type === 'vv') ? vvFlats[index][field] = value : tvFlats[index][field] = value; handleInput(type); }
-        function deleteFlat(type, index) { (type === 'vv') ? vvFlats.splice(index, 1) : tvFlats.splice(index, 1); renderFlats(type); saveSettings(type); }
+        function addFlat(type) { 
+            (type === 'vv') ? vvFlats.push({ label: "", value: "" }) : tvFlats.push({ label: "", value: "" }); 
+            renderFlats(type); 
+            saveSettings(type); 
+        }
+        function updateFlat(type, index, field, value) { 
+            (type === 'vv') ? vvFlats[index][field] = value : tvFlats[index][field] = value; 
+            handleInput(type); 
+        }
+        function deleteFlat(type, index) { 
+            (type === 'vv') ? vvFlats.splice(index, 1) : tvFlats.splice(index, 1); 
+            renderFlats(type); 
+            saveSettings(type); 
+        }
         
         function handleInput(type) { 
             const manualCheckbox = document.getElementById(`${type}ManualHoliday`);
-            if (manualCheckbox) localStorage.setItem(`${type}_manual_holiday`, manualCheckbox.checked);
-            updateHolidayHint(type); generateMessage(type); saveSettings(type); 
+            if (manualCheckbox) {
+                localStorage.setItem(`${type}_manual_holiday`, manualCheckbox.checked);
+            }
+            updateHolidayHint(type);
+            generateMessage(type); 
+            saveSettings(type); 
         }
         
         function saveSettings(type) {
             if (type === 'vv') { 
-                localStorage.setItem('vv_flats_v17', JSON.stringify(vvFlats)); 
-                localStorage.setItem('vv_remarks_v17', document.getElementById('vv_remarks').value); 
-                localStorage.setItem('vv_wk_amb_v17', document.getElementById('vvWeekdayAmb').value); 
-                localStorage.setItem('vv_hol_amb_v17', document.getElementById('vvHolidayAmb').value); 
+                localStorage.setItem('vv_flats_v15', JSON.stringify(vvFlats)); 
+                localStorage.setItem('vv_remarks_v15', document.getElementById('vv_remarks').value); 
+                localStorage.setItem('vv_wk_amb_v15', document.getElementById('vvWeekdayAmb').value); 
+                localStorage.setItem('vv_hol_amb_v15', document.getElementById('vvHolidayAmb').value); 
             } else { 
-                localStorage.setItem('tv_flats_v17', JSON.stringify(tvFlats)); 
-                localStorage.setItem('tv_remarks_v17', document.getElementById('tv_remarks').value); 
-                localStorage.setItem('tv_wk_amb_v17', document.getElementById('tvWeekdayAmb').value); 
-                localStorage.setItem('tv_hol_amb_v17', document.getElementById('tvHolidayAmb').value); 
+                localStorage.setItem('tv_flats_v15', JSON.stringify(tvFlats)); 
+                localStorage.setItem('tv_remarks_v15', document.getElementById('tv_remarks').value); 
+                localStorage.setItem('tv_wk_amb_v15', document.getElementById('tvWeekdayAmb').value); 
+                localStorage.setItem('tv_hol_amb_v15', document.getElementById('tvHolidayAmb').value); 
             }
             const badge = document.getElementById(`${type}SaveBadge`); 
-            badge.style.display = 'inline'; setTimeout(() => { badge.style.display = 'none'; }, 2000);
+            badge.style.display = 'inline'; 
+            setTimeout(() => { badge.style.display = 'none'; }, 2000);
         }
 
-        // ===== Excel 讀取 =====
-        document.getElementById('excelFile').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const errorEl = document.getElementById('uploadError');
-            errorEl.style.display = 'none';
-            if (!file) { errorEl.textContent = '❌ 未選擇檔案'; errorEl.style.display = 'block'; return; }
-            
-            const reader = new FileReader();
-            document.getElementById('uploadStatus').innerText = `🔄 正在讀取檔案...`;
-            document.getElementById('uploadStatus').style.color = "#d4af37";
-            
-            reader.onload = async function(e) {
-                try {
-                    const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
-                    rosterData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
-                    await saveDataToDB(STORE_ROSTER, "rosterData", rosterData);
-                    
-                    document.getElementById('uploadStatus').innerText = `✅ 更表數據已成功永久內置！(${rosterData.length} 行數據)`;
-                    document.getElementById('uploadStatus').style.color = "#28a745";
-                    
-                    if (rosterData[1] && rosterData[1][0]) { const match = rosterData[1][0].match(/(\d{4})年(\d{1,2})月份/); if (match) { rosterYear = match[1]; rosterMonth = match[2]; daysInMonth = new Date(rosterYear, rosterMonth, 0).getDate(); } }
-                    
-                    processRosterData(); // 呼叫 AI 解析引擎
-                    populateEmployeeDropdown(); 
-                    generateMessage('vv'); 
-                    generateMessage('tv');
-                    
-                    checkDBStatus();
-                    alert('✅ 更表上載成功！');
-                } catch (error) {
-                    document.getElementById('uploadStatus').innerText = "❌ 讀取失敗";
-                    document.getElementById('uploadStatus').style.color = "#d9534f";
-                    errorEl.textContent = '❌ ' + error.message; errorEl.style.display = 'block';
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        function parseShiftToHR(shiftValue) { let val = (shiftValue || "").toString().trim().toUpperCase(); if (!val) return { time: '--', desc: '--', hours: '--' }; if (EXACT_LEAVE_TYPES[val]) return { time: EXACT_LEAVE_TYPES[val], desc: EXACT_LEAVE_TYPES[val] + '一天', hours: '--' }; for (const [symbol, leaveName] of Object.entries(SYMBOL_LEAVE_TYPES)) { if (val.includes(symbol)) return { time: leaveName, desc: leaveName + '一天', hours: '--' }; } let locations = []; let timeRange = ''; let foundWork = false; val.split('/').forEach(p => { const trimmed = p.trim(); if (WORK_LOCATIONS[trimmed]) { foundWork = true; locations.push(WORK_LOCATIONS[trimmed].desc); if (timeRange === '') timeRange = WORK_LOCATIONS[trimmed].time; } }); if (foundWork) return { time: timeRange, desc: locations.join(' / '), hours: 8.5 }; return { time: '--', desc: val, hours: '--' }; }
-        
-        // ===== 利用智能引擎生成當值名單 =====
+        // ===== 產生訊息（使用 rosterData） =====
         function generateMessage(type) {
             const isVV = type === 'vv';
             const dateInput = document.getElementById(`${type}DutyDate`).value;
             if (!dateInput) return;
-            const d = new Date(dateInput);
+            
+            const parts = dateInput.split('-');
+            const day = parseInt(parts[2], 10);
+            const month = parseInt(parts[1], 10);
+            const year = parseInt(parts[0], 10);
+            const d = new Date(year, month - 1, day);
             const weekdayNum = d.getDay();
-            const targetDay = d.getDate();
-            const formattedDate = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} (${["日","一","二","三","四","五","六"][weekdayNum]})`;
+            const formattedDate = `${day}/${month}/${year} (${["日","一","二","三","四","五","六"][weekdayNum]})`;
+            
             const customWkAmb = document.getElementById(`${type}WeekdayAmb`).value || (isVV ? "15" : "3");
             const customHolAmb = document.getElementById(`${type}HolidayAmb`).value || (isVV ? "16" : "4");
-
             const manualCheckboxId = `${type}ManualHoliday`;
-            const isHolidayDay = isHoliday(dateInput, manualCheckboxId);
+            
+            let isHolidayDay = false;
+            const manualCheckbox = document.getElementById(manualCheckboxId);
+            if (manualCheckbox && manualCheckbox.checked) {
+                isHolidayDay = true;
+            } else if (isWeekend(dateInput) || isHKHoliday(dateInput)) {
+                isHolidayDay = true;
+            }
             let ambassadorCount = isHolidayDay ? customHolAmb : customWkAmb;
 
             let salesToday = [], internToday = [];
             
-            // 確保資料已載入，並且成功搵到日期欄位
-            if (rosterData.length > 0 && Object.keys(dayColMap).length > 0) {
-                const colIdx = dayColMap[targetDay]; 
+            if (rosterData.length > 0) {
+                // 員工數據由第 5 行開始（索引 5）
+                const startRow = 5;
+                // 日期 1 在索引 3，日期 12 在索引 14
+                const targetCol = day + 2;
                 
-                if (colIdx !== undefined) {
-                    staffData.forEach(staff => {
-                        // 去對應嘅 row 同 column 攞出更期字眼
-                        let shiftValue = String(rosterData[staff.rowIdx][colIdx] || "").toUpperCase();
-                        if (!shiftValue) return;
-                        
-                        let isIntern = internPool.includes(staff.id);
-                        let isWorking = false;
-                        
-                        // 用 includes 去解決癡埋一齊嘅字眼，例如 'TVVV' 包含 'TV' 也包含 'VV'
-                        if (isVV && (shiftValue.includes('VV') || shiftValue.includes('VW'))) {
-                            isWorking = true;
-                        } else if (!isVV && shiftValue.includes('TV')) {
-                            isWorking = true;
+                for (let i = startRow; i < rosterData.length; i++) {
+                    let row = rosterData[i];
+                    if (!row || !row[0]) continue;
+                    let fullName = String(row[0]).trim();
+                    let firstName = fullName.split(' ')[0] || '';
+                    if (!firstName || firstName === '姓名' || firstName === '星期' || firstName === '值勤地點') continue;
+                    
+                    let shiftValue = String(row[targetCol] || "").trim().toUpperCase();
+                    
+                    if (isVV && (shiftValue.includes('VV') || shiftValue.includes('VW'))) {
+                        if (salesPool.includes(firstName) && !salesToday.includes(firstName)) {
+                            salesToday.push(firstName);
                         }
-                        
-                        if (isWorking) {
-                            if (isIntern) {
-                                if (!internToday.includes(staff.id)) internToday.push(staff.id);
-                            } else {
-                                if (!salesToday.includes(staff.id)) salesToday.push(staff.id);
-                            }
+                        if (internPool.includes(firstName) && !internToday.includes(firstName)) {
+                            internToday.push(firstName);
                         }
-                    });
+                    } else if (!isVV && shiftValue.includes('TV')) {
+                        if (salesPool.includes(firstName) && !salesToday.includes(firstName)) {
+                            salesToday.push(firstName);
+                        }
+                    }
                 }
             }
             
@@ -782,79 +876,114 @@
             const flatsArr = isVV ? vvFlats : tvFlats;
             flatsArr.forEach(flat => { if (flat.label.trim() && flat.value.trim()) showflatText += `${flat.label}：${flat.value}\n`; });
             showflatText += `\n${document.getElementById(`${type}_remarks`).value.trim()}`;
-            
             const projName = isVV ? "維港‧灣畔現樓" : "維港‧雙鑽現樓";
             const cleanerCount = isVV ? 3 : 1;
-            
             let msg = `${projName}\n${formattedDate}\n\n⏰當值時間：10:30pm-7:00pm\n\n👤當值人員\n`;
             msg += `銷售 ：${salesToday.length ? salesToday.join(', ') + ' (' + salesToday.length + '人)' : '無 (0人)'}\n`;
             if (isVV) msg += `實習生：${internToday.length ? internToday.join(', ') + ' (' + internToday.length + '人)' : '無 (0人)'}\n`;
             msg += `服務大使：${ambassadorCount}人\n清潔：${cleanerCount}人\n\n「開放示範單位」：\n${showflatText}`;
-            
             document.getElementById(`${type}ResultMessage`).value = msg;
         }
         
-        // HR Dropdown 直接用智能引擎搵出嚟嘅人名！乾淨俐落！
         function populateEmployeeDropdown() {
-            const select = document.getElementById('hrEmployeeSelect'); 
+            const select = document.getElementById('hrEmployeeSelect');
             select.innerHTML = '<option value="">-- 請選擇員工 --</option>';
-            
-            staffData.forEach(staff => {
-                select.innerHTML += `<option value="${staff.id}">${staff.rawName}</option>`;
-            });
+            for (let i = 5; i < rosterData.length; i++) {
+                let row = rosterData[i];
+                if (row && row[0] && typeof row[0] === 'string') {
+                    let name = row[0].trim();
+                    if (name && name !== '姓名' && name !== '星期' && name !== '值勤地點') {
+                        select.innerHTML += `<option value="${i}">${name}</option>`;
+                    }
+                }
+            }
         }
         
         function loadEmployeeData() {
-            const select = document.getElementById('hrEmployeeSelect'); if (!select.value) return;
-            const staffId = select.value;
-            const saved = localStorage.getItem('hr_data_' + staffId);
-            if (saved) { const data = JSON.parse(saved); document.getElementById('hrPosition').value = data.position || ''; document.getElementById('hrEmpId').value = data.empId || ''; } 
-            else { document.getElementById('hrPosition').value = ''; document.getElementById('hrEmpId').value = ''; }
+            const select = document.getElementById('hrEmployeeSelect');
+            if (!select.value) return;
+            const name = select.options[select.selectedIndex].text;
+            const saved = localStorage.getItem('hr_data_' + name);
+            if (saved) {
+                const data = JSON.parse(saved);
+                document.getElementById('hrPosition').value = data.position || '';
+                document.getElementById('hrEmpId').value = data.empId || '';
+            } else {
+                document.getElementById('hrPosition').value = '';
+                document.getElementById('hrEmpId').value = '';
+            }
         }
+        
         function saveEmployeeData() {
-            const select = document.getElementById('hrEmployeeSelect'); if (!select.value) return;
-            const staffId = select.value;
-            localStorage.setItem('hr_data_' + staffId, JSON.stringify({ position: document.getElementById('hrPosition').value.trim(), empId: document.getElementById('hrEmpId').value.trim() }));
+            const select = document.getElementById('hrEmployeeSelect');
+            if (!select.value) return;
+            const name = select.options[select.selectedIndex].text;
+            localStorage.setItem('hr_data_' + name, JSON.stringify({
+                position: document.getElementById('hrPosition').value.trim(),
+                empId: document.getElementById('hrEmpId').value.trim()
+            }));
         }
         
         function exportToWord() {
-            const select = document.getElementById('hrEmployeeSelect'); 
-            if (!select.value) { alert("請先上載更表並選擇員工！"); return; }
-            
-            const staffId = select.value; 
-            const staffObj = staffData.find(s => s.id === staffId);
-            if (!staffObj) return;
-            
-            const rowIndex = staffObj.rowIdx;
-            const empName = staffObj.rawName;
-            
-            const position = document.getElementById('hrPosition').value.trim(); 
+            const select = document.getElementById('hrEmployeeSelect');
+            if (!select.value) { alert("請先選擇員工！"); return; }
+            const rowIndex = parseInt(select.value);
+            const empName = select.options[select.selectedIndex].text;
+            const position = document.getElementById('hrPosition').value.trim();
             const empId = document.getElementById('hrEmpId').value.trim();
-            if (!rosterYear || !rosterMonth) { alert("無法從 Excel 讀取年月，請確保格式正確。"); return; }
             
-            const rowData = rosterData[rowIndex]; 
+            const rowData = rosterData[rowIndex];
             let totalHours = 0;
             let imgHtml = savedLogoBase64 ? `<img src="${savedLogoBase64}" style="width: 250px; height: auto;" />` : `<h3 style="color:#0056b3;">[未上載公司 Logo]</h3>`;
             let htmlContent = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>body { font-family: 'MingLiU', 'PMingLiU', 'Microsoft JhengHei', sans-serif; font-size: 12pt; } table { width: 100%; border-collapse: collapse; margin-bottom: 10px; } th, td { border: 1px solid black; padding: 6px; text-align: center; } .meta-table td { border: none; text-align: left; padding: 2px; } h2 { text-align: center; font-size: 16pt; margin-bottom: 20px; } .logo-container { text-align: left; margin-bottom: 15px; } </style></head><body><div class="logo-container">${imgHtml}</div><h2>手寫出勤記錄表 ( ${rosterYear} )年(${rosterMonth})月份</h2><table class="meta-table"><tr><td style="width: 25%;">姓名：${empName}</td><td style="width: 25%;">職位：${position}</td><td style="width: 25%;">部門/地盤：營業部</td><td style="width: 25%;">員工編號：${empId}</td></tr></table><table><tr><th style="width: 10%;">日</th><th style="width: 30%;">工作起止時間</th><th style="width: 45%;">工作內容</th><th style="width: 15%;">共計</th></tr>`;
-            
-            // 用 dayColMap 解決 HR 表格走位問題
             for (let day = 1; day <= daysInMonth; day++) {
-                let colIdx = dayColMap[day];
-                let shiftVal = colIdx !== undefined ? rowData[colIdx] : "";
-                const parsed = parseShiftToHR(shiftVal);
+                const parsed = parseShiftToHR(rowData[day + 2]);
                 htmlContent += `<tr><td>${day}</td><td>${parsed.time}</td><td>${parsed.desc}</td><td>${parsed.hours === '--' ? '--' : parsed.hours + '小時'}</td></tr>`;
                 if (typeof parsed.hours === 'number') totalHours += parsed.hours;
             }
             htmlContent += `</table><p style="text-align: right; margin-top: 10px; font-weight: bold;">總計時數：${totalHours} 小時</p></body></html>`;
-            const monthsEng = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            const monthWord = monthsEng[parseInt(rosterMonth) - 1] || rosterMonth; 
-            
-            const safeName = staffObj.id.replace(/ /g, '_');
-            const fileDownload = document.createElement("a"); document.body.appendChild(fileDownload);
-            fileDownload.href = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(htmlContent); fileDownload.download = `${safeName}出勤記錄表${monthWord} ${rosterYear}.doc`; fileDownload.click(); document.body.removeChild(fileDownload);
+            const monthWord = "July";
+            const safeName = empName.replace(/ /g, '_');
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(htmlContent);
+            fileDownload.download = `${safeName}出勤記錄表${monthWord} ${rosterYear}.doc`;
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
         }
 
-        function copyToClipboard(elementId) { const t = document.getElementById(elementId); if(!t.value || t.value.includes("請先上載")) { alert("未能複製空內容"); return; } t.select(); t.setSelectionRange(0, 99999); navigator.clipboard.writeText(t.value).then(() => alert("✅ 已複製")).catch(() => alert("請手動複製")); }
+        function parseShiftToHR(shiftValue) { 
+            let val = (shiftValue || "").toString().trim().toUpperCase(); 
+            if (!val) return { time: '--', desc: '--', hours: '--' }; 
+            if (EXACT_LEAVE_TYPES[val]) return { time: EXACT_LEAVE_TYPES[val], desc: EXACT_LEAVE_TYPES[val] + '一天', hours: '--' }; 
+            for (const [symbol, leaveName] of Object.entries(SYMBOL_LEAVE_TYPES)) { 
+                if (val.includes(symbol)) return { time: leaveName, desc: leaveName + '一天', hours: '--' }; 
+            } 
+            let locations = []; 
+            let timeRange = ''; 
+            let foundWork = false; 
+            val.split('/').forEach(p => { 
+                const trimmed = p.trim(); 
+                if (WORK_LOCATIONS[trimmed]) { 
+                    foundWork = true; 
+                    locations.push(WORK_LOCATIONS[trimmed].desc); 
+                    if (timeRange === '') timeRange = WORK_LOCATIONS[trimmed].time; 
+                } 
+            }); 
+            if (foundWork) return { time: timeRange, desc: locations.join(' / '), hours: 8.5 }; 
+            return { time: '--', desc: val, hours: '--' }; 
+        }
+
+        function copyToClipboard(elementId) { 
+            const t = document.getElementById(elementId); 
+            if(!t.value || t.value.includes("請選擇日期")) { 
+                alert("未能複製空內容"); 
+                return; 
+            } 
+            t.select(); 
+            t.setSelectionRange(0, 99999); 
+            navigator.clipboard.writeText(t.value).then(() => alert("✅ 已複製")).catch(() => alert("請手動複製")); 
+        }
 
         // ===== Dark Mode =====
         (function() {
@@ -862,20 +991,46 @@
             const icon = document.getElementById('themeIcon');
             const label = document.getElementById('themeLabel');
             const html = document.documentElement;
-
             const savedTheme = localStorage.getItem('cohl-theme');
-            if (savedTheme === 'dark') { html.setAttribute('data-theme', 'dark'); icon.textContent = '☀️'; label.textContent = '淺色'; }
-
+            if (savedTheme === 'dark') {
+                html.setAttribute('data-theme', 'dark');
+                icon.textContent = '☀️';
+                label.textContent = '淺色';
+            }
             toggle.addEventListener('click', function() {
                 const isDark = html.getAttribute('data-theme') === 'dark';
-                if (isDark) { html.removeAttribute('data-theme'); localStorage.setItem('cohl-theme', 'light'); icon.textContent = '🌙'; label.textContent = '深色'; } 
-                else { html.setAttribute('data-theme', 'dark'); localStorage.setItem('cohl-theme', 'dark'); icon.textContent = '☀️'; label.textContent = '淺色'; }
+                if (isDark) {
+                    html.removeAttribute('data-theme');
+                    localStorage.setItem('cohl-theme', 'light');
+                    icon.textContent = '🌙';
+                    label.textContent = '深色';
+                } else {
+                    html.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('cohl-theme', 'dark');
+                    icon.textContent = '☀️';
+                    label.textContent = '淺色';
+                }
             });
         })();
 
         // ===== 下拉菜單 =====
-        document.querySelectorAll('.dropdown-toggle').forEach(function(toggle) { toggle.addEventListener('click', function(e) { e.preventDefault(); var parent = this.closest('.dropdown'); if (parent) { parent.classList.toggle('open'); } }); });
-        document.addEventListener('click', function(e) { document.querySelectorAll('.dropdown.open').forEach(function(dropdown) { if (!dropdown.contains(e.target)) { dropdown.classList.remove('open'); } }); });
+        document.querySelectorAll('.dropdown-toggle').forEach(function(toggle) {
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                var parent = this.closest('.dropdown');
+                if (parent) {
+                    parent.classList.toggle('open');
+                }
+            });
+        });
+
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.dropdown.open').forEach(function(dropdown) {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.classList.remove('open');
+                }
+            });
+        });
     </script>
 </body>
 </html>

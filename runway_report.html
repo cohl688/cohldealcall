@@ -215,24 +215,33 @@
 
     <script>
         // ==========================================
-        // IndexedDB 儲存 - 統一版本管理
+        // IndexedDB - 統一管理（同時建立兩個 Store）
         // ==========================================
         const DB_NAME = "ColiAppDB";
         const STORE_FLATMIX = "FlatMixStore";
-        const DB_VERSION = 4;  // 同 hr_management 同步
+        const STORE_ROSTER = "RosterStore";
+        const DB_VERSION = 5;  // 升到 5，確保兩個 Store 都被建立
 
         function openDB() {
             return new Promise((resolve, reject) => {
                 const req = indexedDB.open(DB_NAME, DB_VERSION);
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
-                    // 建立 FlatMixStore
+                    // 建立 FlatMixStore（如果不存在）
                     if (!db.objectStoreNames.contains(STORE_FLATMIX)) {
                         db.createObjectStore(STORE_FLATMIX, { keyPath: "id" });
                     }
+                    // 建立 RosterStore（如果不存在）- 確保與 hr_management 共用
+                    if (!db.objectStoreNames.contains(STORE_ROSTER)) {
+                        db.createObjectStore(STORE_ROSTER, { keyPath: "id" });
+                    }
                 };
-                req.onsuccess = (e) => resolve(e.target.result);
-                req.onerror = (e) => reject(e.target.error);
+                req.onsuccess = (e) => {
+                    resolve(e.target.result);
+                };
+                req.onerror = (e) => {
+                    reject(e.target.error);
+                };
             });
         }
 
@@ -257,26 +266,23 @@
             }
         }
 
-        // 修復數據庫
+        // 修復數據庫（只刪除 FlatMixStore 數據，保留 RosterStore）
         async function fixDatabase() {
-            if (!confirm("此操作將刪除所有 Flat Mix 數據並重建數據庫，確定繼續嗎？")) return;
+            if (!confirm("此操作將刪除所有 Flat Mix 數據並重建數據庫，確定繼續嗎？（更表數據不會受影響）")) return;
             
             const statusEl = document.getElementById('dbStatus');
             statusEl.textContent = '⏳ 正在修復數據庫...';
             statusEl.className = 'db-status warning';
             
             try {
+                // 只刪除 FlatMixStore 的數據，不刪除整個數據庫
                 const db = await openDB();
+                if (db.objectStoreNames.contains(STORE_FLATMIX)) {
+                    const tx = db.transaction([STORE_FLATMIX], "readwrite");
+                    tx.objectStore(STORE_FLATMIX).clear();
+                    await new Promise((resolve) => { tx.oncomplete = resolve; });
+                }
                 db.close();
-                
-                await new Promise((resolve, reject) => {
-                    const req = indexedDB.deleteDatabase(DB_NAME);
-                    req.onsuccess = () => resolve();
-                    req.onerror = () => reject(req.error);
-                });
-                
-                const newDb = await openDB();
-                newDb.close();
                 
                 flatMixData = [];
                 document.getElementById('flatMixUploadBox').style.display = 'block';
@@ -286,9 +292,9 @@
                 document.getElementById('flatMixFile').value = '';
                 document.getElementById('flatMixError').style.display = 'none';
                 
-                statusEl.textContent = '✅ 數據庫已重建成功！請重新上載 Flat Mix Excel';
+                statusEl.textContent = '✅ Flat Mix 數據已清除！請重新上載';
                 statusEl.className = 'db-status success';
-                alert('✅ 數據庫已成功修復！請重新上載 Flat Mix Excel。');
+                alert('✅ Flat Mix 數據已清除！請重新上載 Excel。');
                 
             } catch (e) {
                 statusEl.textContent = '❌ 修復失敗: ' + e.message;
@@ -343,7 +349,7 @@
         }
 
         async function resetFlatMix() {
-            if (confirm("確定要清除現有 Flat Mix 數據並重新上載嗎？")) {
+            if (confirm("確定要清除現有 Flat Mix 數據並重新上載嗎？（更表數據不會受影響）")) {
                 flatMixData = [];
                 document.getElementById('flatMixUploadBox').style.display = 'block';
                 document.getElementById('resetFlatMixBtn').style.display = 'none';
@@ -367,7 +373,6 @@
         }
 
         window.onload = async function() {
-            // 檢查數據庫狀態
             await checkDBStatus();
             
             try {
@@ -386,7 +391,6 @@
                 document.getElementById('flatMixError').style.display = 'block';
             }
 
-            // 載入語言偏好
             const savedLang = localStorage.getItem('cohl_lang') || 'zh-HK';
             switchLang(savedLang);
         };
