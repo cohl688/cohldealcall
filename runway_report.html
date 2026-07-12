@@ -11,6 +11,79 @@
     <link rel="stylesheet" href="./style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <title>跑道區成交 - 報數系統</title>
+    <style>
+        /* 跑道區成交頁面專屬樣式（已整合至 style.css，但保留少量覆蓋） */
+        .runway-container .upload-box {
+            border: 2px dashed var(--cohl-border);
+            padding: 18px 12px;
+            text-align: center;
+            background: var(--cohl-editor-bg);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .runway-container .upload-box:hover {
+            border-color: var(--cohl-red);
+            background: var(--cohl-card-bg);
+        }
+        .runway-container .upload-box label {
+            font-weight: 600;
+            color: var(--cohl-dark);
+            display: block;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+        .runway-container .upload-box input[type="file"] {
+            border: none;
+            padding: 0;
+            background: transparent;
+            font-size: 12px;
+            color: var(--cohl-muted);
+            cursor: pointer;
+            width: 100%;
+        }
+        .runway-container .upload-box.has-data {
+            border-color: var(--cohl-red);
+            background: rgba(230, 0, 18, 0.03);
+        }
+        .runway-container .save-status {
+            font-size: 12px;
+            color: var(--cohl-muted);
+            padding: 4px 12px;
+            background: var(--cohl-editor-bg);
+            border: 1px solid var(--cohl-border);
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        .runway-container .save-status.saved {
+            color: #2da44e;
+            border-color: #2da44e;
+        }
+        .runway-container .btn-reset {
+            background: #d9534f;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        .runway-container .btn-reset:hover {
+            background: #c9302c;
+        }
+        @media (max-width: 480px) {
+            .runway-container .upload-box {
+                padding: 14px 10px;
+            }
+            .runway-container .upload-box input[type="file"] {
+                font-size: 14px;
+                padding: 8px 0;
+            }
+        }
+    </style>
 </head>
 <body>
 
@@ -45,6 +118,11 @@
             </div>
             <a href="./hr_management.html">人力資源</a>
         </div>
+        <div class="lang-toggle">
+            <button class="active-lang" data-lang="zh-HK" onclick="switchLang('zh-HK')">繁</button>
+            <button data-lang="zh-CN" onclick="switchLang('zh-CN')">简</button>
+            <button data-lang="en" onclick="switchLang('en')">EN</button>
+        </div>
         <button class="theme-toggle" id="themeToggle" aria-label="切換深色模式">
             <span id="themeIcon">🌙</span>
             <span class="toggle-label" id="themeLabel">深色</span>
@@ -63,7 +141,8 @@
                 <label>首次設定：上載跑道區 Flat Mix Excel</label>
                 <input type="file" id="flatMixFile" accept=".xlsx, .xls">
             </div>
-            <button id="resetFlatMixBtn" onclick="resetFlatMix()" style="display:none; margin-top:10px; background:#d9534f; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-size:13px; font-weight:bold;">🔄 清除數據並重新上載</button>
+            <button class="btn-reset" id="resetFlatMixBtn" onclick="resetFlatMix()" style="display:none;">🔄 清除數據並重新上載</button>
+            <div id="flatMixError" style="color:#d9534f; font-size:0.8em; margin-top:6px; display:none;"></div>
         </div>
 
         <div class="card">
@@ -95,18 +174,21 @@
 
     <script>
         // ==========================================
-        // IndexedDB 儲存（獨立但共用）
+        // IndexedDB 儲存（獨立但共用 DB）
         // ==========================================
         const DB_NAME = "ColiAppDB";
         const STORE_FLATMIX = "FlatMixStore";
-        const DB_VERSION = 2;
+        const DB_VERSION = 3;  // 同 hr_management 同步版本
 
         function openDB() {
             return new Promise((resolve, reject) => {
                 const req = indexedDB.open(DB_NAME, DB_VERSION);
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
-                    if (!db.objectStoreNames.contains(STORE_FLATMIX)) db.createObjectStore(STORE_FLATMIX, { keyPath: "id" });
+                    // 建立 FlatMixStore（如果不存在）
+                    if (!db.objectStoreNames.contains(STORE_FLATMIX)) {
+                        db.createObjectStore(STORE_FLATMIX, { keyPath: "id" });
+                    }
                 };
                 req.onsuccess = (e) => resolve(e.target.result);
                 req.onerror = (e) => reject(e.target.error);
@@ -123,7 +205,10 @@
                     tx.oncomplete = resolve;
                     tx.onerror = reject;
                 });
-            } catch(e) { console.error("DB Save Error", e); }
+            } catch(e) {
+                console.error("DB Save Error", e);
+                throw e;
+            }
         }
 
         async function loadDataFromDB(storeName, dataId) {
@@ -136,7 +221,10 @@
                     req.onsuccess = () => resolve(req.result ? req.result.data : null);
                     req.onerror = reject;
                 });
-            } catch(e) { console.error("DB Load Error", e); return null; }
+            } catch(e) {
+                console.error("DB Load Error", e);
+                return null;
+            }
         }
 
         // ==========================================
@@ -158,44 +246,88 @@
                 document.getElementById('flatMixUploadBox').style.display = 'block';
                 document.getElementById('resetFlatMixBtn').style.display = 'none';
                 updateUploadStatus('📎 未上傳', false);
+                document.getElementById('flatMixError').style.display = 'none';
+                document.getElementById('flatMixFile').value = '';
                 
-                const db = await openDB();
-                const tx = db.transaction([STORE_FLATMIX], "readwrite");
-                tx.objectStore(STORE_FLATMIX).delete("flatMixData");
+                try {
+                    const db = await openDB();
+                    if (db.objectStoreNames.contains(STORE_FLATMIX)) {
+                        const tx = db.transaction([STORE_FLATMIX], "readwrite");
+                        tx.objectStore(STORE_FLATMIX).delete("flatMixData");
+                    }
+                } catch(e) {}
             }
         }
 
         window.onload = async function() {
-            const saved = await loadDataFromDB(STORE_FLATMIX, "flatMixData");
-            if (saved && saved.length > 0) {
-                flatMixData = saved;
-                updateUploadStatus('✅ 已載入 ' + flatMixData.length + ' 筆數據', true);
-                document.getElementById('flatMixUploadBox').style.display = 'none';
-                document.getElementById('resetFlatMixBtn').style.display = 'inline-block';
+            try {
+                const saved = await loadDataFromDB(STORE_FLATMIX, "flatMixData");
+                if (saved && saved.length > 0) {
+                    flatMixData = saved;
+                    updateUploadStatus('✅ 已載入 ' + flatMixData.length + ' 筆數據', true);
+                    document.getElementById('flatMixUploadBox').style.display = 'none';
+                    document.getElementById('resetFlatMixBtn').style.display = 'inline-block';
+                } else {
+                    updateUploadStatus('📎 未上傳', false);
+                }
+            } catch(e) {
+                updateUploadStatus('⚠️ 讀取失敗，請重新上載', false);
             }
+
+            // 載入語言偏好
+            const savedLang = localStorage.getItem('cohl_lang') || 'zh-HK';
+            switchLang(savedLang);
         };
 
         document.getElementById('flatMixFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
-            if (!file) return;
+            const errorEl = document.getElementById('flatMixError');
+            errorEl.style.display = 'none';
+            
+            if (!file) {
+                errorEl.textContent = '❌ 未選擇檔案';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            // 檢查檔案類型
+            const validTypes = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'];
+            if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+                errorEl.textContent = '❌ 請上載 .xlsx, .xls 或 .csv 格式檔案';
+                errorEl.style.display = 'block';
+                return;
+            }
+
             const reader = new FileReader();
+            updateUploadStatus('🔄 處理中...', false);
+
             reader.onload = async function(e) {
                 try {
-                    updateUploadStatus('🔄 處理中...', false);
                     const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                     flatMixData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
                     await saveDataToDB(STORE_FLATMIX, "flatMixData", flatMixData);
+                    
                     updateUploadStatus('✅ 已載入 ' + flatMixData.length + ' 筆數據', true);
                     document.getElementById('flatMixUploadBox').style.display = 'none';
                     document.getElementById('resetFlatMixBtn').style.display = 'inline-block';
+                    alert('✅ Flat Mix 數據上載成功！');
                 } catch(err) {
                     updateUploadStatus('❌ 格式錯誤', false);
+                    errorEl.textContent = '❌ ' + err.message;
+                    errorEl.style.display = 'block';
                 }
+            };
+            reader.onerror = function() {
+                updateUploadStatus('❌ 讀取失敗', false);
+                errorEl.textContent = '❌ 無法讀取檔案，請確認檔案是否損毀';
+                errorEl.style.display = 'block';
             };
             reader.readAsArrayBuffer(file);
         });
 
-        // ===== 跑道區成交過濾 =====
+        // ==========================================
+        // 跑道區成交過濾（完整保留）
+        // ==========================================
         const RUNWAY_KEYWORDS = {
             "維港1號": "OV", "維港一號": "OV",
             "啟德海灣": "KTM", "啟德海灣(I)": "KTM", "啟德海灣(II)": "KTM",
@@ -380,7 +512,46 @@
             navigator.clipboard.writeText(t.value).then(() => alert("✅ 已複製")).catch(() => alert("請手動複製"));
         }
 
-        // ===== Dark Mode =====
+        // ==========================================
+        // 語言切換
+        // ==========================================
+        const translations = {
+            'zh-HK': {
+                'nav_home': '主頁','nav_residential': '住宅','nav_carpark': '車位','nav_tools': '使用小工具','nav_runway': '📊 報每日跑道區成交','nav_hr': '人力資源',
+                'nav_v1': '維港1號','nav_vd': '維港雙鑽','nav_vv': '維港灣畔',
+                'nav_ovcp': '維港1號車位','nav_tvcp': '維港雙鑽車位','nav_vvcp': '維港灣畔車位',
+                'footer_home': '主頁','footer_website': '官方網站'
+            },
+            'zh-CN': {
+                'nav_home': '主页','nav_residential': '住宅','nav_carpark': '车位','nav_tools': '使用小工具','nav_runway': '📊 报每日跑道区成交','nav_hr': '人力资源',
+                'nav_v1': '维港1号','nav_vd': '维港双钻','nav_vv': '维港湾畔',
+                'nav_ovcp': '维港1号车位','nav_tvcp': '维港双钻车位','nav_vvcp': '维港湾畔车位',
+                'footer_home': '主页','footer_website': '官方网站'
+            },
+            'en': {
+                'nav_home': 'Home','nav_residential': 'Residential','nav_carpark': 'Carpark','nav_tools': 'Tools','nav_runway': '📊 Daily Runway Transactions','nav_hr': 'HR',
+                'nav_v1': 'One Victoria','nav_vd': 'Twin Victoria','nav_vv': 'Victoria Voyage',
+                'nav_ovcp': 'One Victoria Carpark','nav_tvcp': 'Twin Victoria Carpark','nav_vvcp': 'Victoria Voyage Carpark',
+                'footer_home': 'Home','footer_website': 'Official Website'
+            }
+        };
+
+        function switchLang(lang) {
+            localStorage.setItem('cohl_lang', lang);
+            document.querySelectorAll('.lang-toggle button').forEach(btn => {
+                btn.classList.toggle('active-lang', btn.dataset.lang === lang);
+            });
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.dataset.i18n;
+                if (translations[lang] && translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+        }
+
+        // ==========================================
+        // Dark Mode & 下拉菜單
+        // ==========================================
         (function() {
             const toggle = document.getElementById('themeToggle');
             const icon = document.getElementById('themeIcon');
@@ -410,7 +581,6 @@
             });
         })();
 
-        // ===== 下拉菜單手機點擊支援（無 delay） =====
         document.querySelectorAll('.dropdown-toggle').forEach(function(toggle) {
             toggle.addEventListener('click', function(e) {
                 e.preventDefault();
