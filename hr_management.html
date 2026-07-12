@@ -311,21 +311,11 @@
             '2026-12-25', '2026-12-26'
         ];
 
-        function isHKHoliday(dateStr) {
-            return HK_HOLIDAYS.includes(dateStr);
-        }
-
-        function isWeekend(dateStr) {
-            const d = new Date(dateStr);
-            const day = d.getDay();
-            return day === 0 || day === 6;
-        }
-
+        function isHKHoliday(dateStr) { return HK_HOLIDAYS.includes(dateStr); }
+        function isWeekend(dateStr) { const d = new Date(dateStr); return d.getDay() === 0 || d.getDay() === 6; }
         function isHoliday(dateStr, manualCheckboxId) {
             const manualCheckbox = document.getElementById(manualCheckboxId);
-            if (manualCheckbox && manualCheckbox.checked) {
-                return true;
-            }
+            if (manualCheckbox && manualCheckbox.checked) return true;
             return isWeekend(dateStr) || isHKHoliday(dateStr);
         }
 
@@ -333,66 +323,41 @@
         // 語言切換
         // ==========================================
         const translations = {
-            'zh-HK': {
-                'nav_home': '主頁','nav_residential': '住宅','nav_carpark': '車位','nav_tools': '使用小工具','nav_runway': '📊 報每日跑道區成交','nav_hr': '人力資源',
-                'nav_v1': '維港1號','nav_vd': '維港雙鑽','nav_vv': '維港灣畔',
-                'nav_ovcp': '維港1號車位','nav_tvcp': '維港雙鑽車位','nav_vvcp': '維港灣畔車位',
-                'footer_home': '主頁','footer_website': '官方網站'
-            },
-            'zh-CN': {
-                'nav_home': '主页','nav_residential': '住宅','nav_carpark': '车位','nav_tools': '使用小工具','nav_runway': '📊 报每日跑道区成交','nav_hr': '人力资源',
-                'nav_v1': '维港1号','nav_vd': '维港双钻','nav_vv': '维港湾畔',
-                'nav_ovcp': '维港1号车位','nav_tvcp': '维港双钻车位','nav_vvcp': '维港湾畔车位',
-                'footer_home': '主页','footer_website': '官方网站'
-            },
-            'en': {
-                'nav_home': 'Home','nav_residential': 'Residential','nav_carpark': 'Carpark','nav_tools': 'Tools','nav_runway': '📊 Daily Runway Transactions','nav_hr': 'HR',
-                'nav_v1': 'One Victoria','nav_vd': 'Twin Victoria','nav_vv': 'Victoria Voyage',
-                'nav_ovcp': 'One Victoria Carpark','nav_tvcp': 'Twin Victoria Carpark','nav_vvcp': 'Victoria Voyage Carpark',
-                'footer_home': 'Home','footer_website': 'Official Website'
-            }
+            'zh-HK': { 'nav_home': '主頁','nav_residential': '住宅','nav_carpark': '車位','nav_tools': '使用小工具','nav_runway': '📊 報每日跑道區成交','nav_hr': '人力資源', 'nav_v1': '維港1號','nav_vd': '維港雙鑽','nav_vv': '維港灣畔', 'nav_ovcp': '維港1號車位','nav_tvcp': '維港雙鑽車位','nav_vvcp': '維港灣畔車位', 'footer_home': '主頁','footer_website': '官方網站' },
+            'zh-CN': { 'nav_home': '主页','nav_residential': '住宅','nav_carpark': '车位','nav_tools': '使用小工具','nav_runway': '📊 报每日跑道区成交','nav_hr': '人力资源', 'nav_v1': '维港1号','nav_vd': '维港双钻','nav_vv': '维港湾畔', 'nav_ovcp': '维港1号车位','nav_tvcp': '维港双钻车位','nav_vvcp': '维港湾畔车位', 'footer_home': '主页','footer_website': '官方网站' },
+            'en': { 'nav_home': 'Home','nav_residential': 'Residential','nav_carpark': 'Carpark','nav_tools': 'Tools','nav_runway': '📊 Daily Runway Transactions','nav_hr': 'HR', 'nav_v1': 'One Victoria','nav_vd': 'Twin Victoria','nav_vv': 'Victoria Voyage', 'nav_ovcp': 'One Victoria Carpark','nav_tvcp': 'Twin Victoria Carpark','nav_vvcp': 'Victoria Voyage Carpark', 'footer_home': 'Home','footer_website': 'Official Website' }
         };
 
         function switchLang(lang) {
             localStorage.setItem('cohl_lang', lang);
-            document.querySelectorAll('.lang-toggle button').forEach(btn => {
-                btn.classList.toggle('active-lang', btn.dataset.lang === lang);
-            });
+            document.querySelectorAll('.lang-toggle button').forEach(btn => { btn.classList.toggle('active-lang', btn.dataset.lang === lang); });
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.dataset.i18n;
-                if (translations[lang] && translations[lang][key]) {
-                    el.textContent = translations[lang][key];
-                }
+                if (translations[lang] && translations[lang][key]) el.textContent = translations[lang][key];
             });
         }
 
         // ==========================================
-        // IndexedDB - 穩定修正版
+        // IndexedDB - 穩定版
         // ==========================================
         const DB_NAME = "ColiAppDB";
         const STORE_ROSTER = "RosterStore";
-        const DB_VERSION = 4;  // 升到 v4，確保建立 Store
+        const DB_VERSION = 4;
 
         function openDB() {
             return new Promise((resolve, reject) => {
                 const req = indexedDB.open(DB_NAME, DB_VERSION);
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
-                    // 強制確保 RosterStore 存在
                     if (!db.objectStoreNames.contains(STORE_ROSTER)) {
                         db.createObjectStore(STORE_ROSTER, { keyPath: "id" });
                     }
                 };
-                req.onsuccess = (e) => {
-                    resolve(e.target.result);
-                };
-                req.onerror = (e) => {
-                    reject(e.target.error);
-                };
+                req.onsuccess = (e) => { resolve(e.target.result); };
+                req.onerror = (e) => { reject(e.target.error); };
             });
         }
 
-        // 檢查數據庫狀態
         async function checkDBStatus() {
             const statusEl = document.getElementById('dbStatus');
             try {
@@ -413,32 +378,16 @@
             }
         }
 
-        // 修復數據庫 - 刪除舊 DB 重新建立
         async function fixDatabase() {
             if (!confirm("此操作將刪除所有更表數據並重建數據庫，確定繼續嗎？")) return;
-            
             const statusEl = document.getElementById('dbStatus');
             statusEl.textContent = '⏳ 正在修復數據庫...';
             statusEl.className = 'db-status warning';
-            
             try {
-                // 關閉所有連接
-                const db = await openDB();
-                db.close();
-                
-                // 刪除整個數據庫
-                await new Promise((resolve, reject) => {
-                    const req = indexedDB.deleteDatabase(DB_NAME);
-                    req.onsuccess = () => resolve();
-                    req.onerror = () => reject(req.error);
-                });
-                
-                // 重新打開（會觸發 onupgradeneeded 建立 Store）
-                const newDb = await openDB();
-                newDb.close();
-                
-                // 重置數據
-                rosterData = [];
+                const db = await openDB(); db.close();
+                await new Promise((resolve, reject) => { const req = indexedDB.deleteDatabase(DB_NAME); req.onsuccess = () => resolve(); req.onerror = () => reject(req.error); });
+                const newDb = await openDB(); newDb.close();
+                rosterData = []; staffData = []; dayColMap = {};
                 document.getElementById('uploadStatus').innerText = "⚠️ 數據庫已重建，請重新上載更表";
                 document.getElementById('uploadStatus').style.color = "#d9534f";
                 document.getElementById('excelFile').value = '';
@@ -446,11 +395,9 @@
                 document.getElementById('vvResultMessage').value = '請先上載 Excel...';
                 document.getElementById('tvResultMessage').value = '請先上載 Excel...';
                 document.getElementById('uploadError').style.display = 'none';
-                
                 statusEl.textContent = '✅ 數據庫已重建成功！請重新上載更表';
                 statusEl.className = 'db-status success';
                 alert('✅ 數據庫已成功修復！請重新上載更表 Excel。');
-                
             } catch (e) {
                 statusEl.textContent = '❌ 修復失敗: ' + e.message;
                 statusEl.className = 'db-status error';
@@ -468,10 +415,7 @@
                     tx.oncomplete = () => { db.close(); resolve(); };
                     tx.onerror = () => { db.close(); reject(tx.error); };
                 });
-            } catch(e) {
-                console.error("DB Save Error", e);
-                throw e;
-            }
+            } catch(e) { console.error("DB Save Error", e); throw e; }
         }
 
         async function loadDataFromDB(storeName, dataId) {
@@ -484,62 +428,112 @@
                     req.onsuccess = () => { db.close(); resolve(req.result ? req.result.data : null); };
                     req.onerror = () => { db.close(); reject(req.error); };
                 });
-            } catch(e) {
-                console.error("DB Load Error", e);
-                return null;
-            }
+            } catch(e) { console.error("DB Load Error", e); return null; }
         }
 
-        // ==========================================
-        // 重置更表
-        // ==========================================
         function resetRoster() {
             if(confirm("確定要清除現有更表數據並重新上載嗎？")) {
-                rosterData = [];
+                rosterData = []; staffData = []; dayColMap = {};
                 document.getElementById('uploadStatus').innerText = "⚠️ 數據已清除，請重新選擇檔案上載";
                 document.getElementById('uploadStatus').style.color = "#d9534f";
                 document.getElementById('uploadError').style.display = 'none';
                 document.getElementById('excelFile').value = '';
-                
-                // 嘗試清除 DB 記錄
                 openDB().then(db => {
                     if (db.objectStoreNames.contains(STORE_ROSTER)) {
                         const tx = db.transaction([STORE_ROSTER], "readwrite");
                         tx.objectStore(STORE_ROSTER).delete("rosterData");
                         tx.oncomplete = () => { db.close(); };
-                    } else {
-                        db.close();
-                    }
+                    } else { db.close(); }
                 }).catch(() => {});
-                
                 document.getElementById('hrEmployeeSelect').innerHTML = '<option value="">-- 請先上載 Excel --</option>';
                 document.getElementById('vvResultMessage').value = '請先上載 Excel...';
                 document.getElementById('tvResultMessage').value = '請先上載 Excel...';
-                
-                // 更新數據庫狀態
                 checkDBStatus();
             }
         }
 
-        function triggerFileUpload() {
-            document.getElementById('excelFile').click();
-        }
+        function triggerFileUpload() { document.getElementById('excelFile').click(); }
 
         // ==========================================
-        // 核心變數與功能
+        // 核心變數與功能 - 重構 AI 解析器
         // ==========================================
         let rosterData = []; 
         let rosterYear = ""; let rosterMonth = ""; let daysInMonth = 31;
-        let employeeList = []; 
         let savedLogoBase64 = "";
 
         const WORK_LOCATIONS = { 'C': { time: '09:00–17:30', desc: '公司(PP3)' }, 'OV': { time: '10:30–19:00', desc: '維港1號(現樓)' }, 'K': { time: '10:30–19:00', desc: '九龍灣國際交易中心' }, 'F': { time: '10:30–19:00', desc: '飛鵝山道3號(現樓)' }, 'TV': { time: '10:30–19:00', desc: '維港．雙鑽(現樓)' }, 'VV': { time: '10:30–19:00', desc: '維港‧灣畔(現樓)' }, 'VW': { time: '10:30–19:00', desc: '維港‧灣畔(現樓)' } };
         const EXACT_LEAVE_TYPES = { 'FL':'喪假', 'Q':'居家隔離', 'ML':'產假', 'PL':'侍產假', 'M':'婚假', 'BL':'生日假', 'CL':'關懷假', 'VL':'義工補假', 'V':'疫苗假', 'WFH':'在家工作', 'JSL':'陪審員假', 'EL':'額外假期', 'SL':'進修假', 'NPL':'無薪假', '/':'半天假' };
         const SYMBOL_LEAVE_TYPES = { '▲':'例假', '✽':'補假', '●':'超時工作補假', '★':'病假', '■':'年假', '◎':'事假' };
-        const salesPool = ["Moon", "Joe", "Andrew", "Ankie", "Eric", "Stephen", "Peter"]; const internPool = ["Sammi", "Karina", "Renne"];
+        
+        const salesPool = ["Moon", "Joe", "Andrew", "Ankie", "Eric", "Stephen", "Peter"];
+        const internPool = ["Sammi", "Karina", "Renne"];
+        
         const defaultVVFlats = [ { label: "1房", value: "T1A-17C" }, { label: "2房（開廚）", value: "T1A-17D, T1A-17E, T1B-17B" }, { label: "2房（梗廚）", value: "T1C-17G" }, { label: "2房+儲物房（梗廚）", value: "T1B-17A, T2A-17A, T2B-17J, T2A-17J" }, { label: "3房1套（開廚）", value: "T5B-17B" }, { label: "3房1套+工作間連洗手間", value: "*T1A-17A, T1A-17B, T5B-17A" } ];
         const defaultTVFlats = [ { label: "開放式", value: "T2A-21C" }, { label: "2房開廚", value: "T1A-21F, T2A-21A, T2B-21D" }, { label: "2房梗廚", value: "T1B-21H, T2A-21G, T2B-21E" }, { label: "3房1套(儲)", value: "#T2B-21G" }, { label: "3房1套(連工人套)", value: "*T2B-21F" } ];
         let vvFlats = [], tvFlats = [];
+
+        // 新增智能資料陣列
+        let dayColMap = {}; // 例如: { 1: 2, 2: 3, 3: 4... } 記錄每日對應的 Excel 欄位索引
+        let staffData = []; // 記錄成功解析的員工: { id: "Moon", rawName: "姓名 Moon Tsang (MT)", rowIdx: 5 }
+
+        // ==========================================
+        // 核心 AI 解析引擎
+        // ==========================================
+        function processRosterData() {
+            dayColMap = {};
+            staffData = [];
+            
+            if (!rosterData || rosterData.length === 0) return;
+
+            // 1. 智能尋找「日期行」(掃描頭 15 行)
+            for (let i = 0; i < Math.min(15, rosterData.length); i++) {
+                let row = rosterData[i];
+                if (!row) continue;
+                
+                let tempMap = {};
+                let foundDays = 0;
+                
+                for (let j = 0; j < row.length; j++) {
+                    let val = String(row[j]).trim();
+                    // 如果呢格係 1-31 嘅純數字
+                    if (/^([1-9]|[12][0-9]|3[01])$/.test(val)) {
+                        tempMap[parseInt(val)] = j;
+                        foundDays++;
+                    }
+                }
+                
+                // 如果一行入面搵到超過 20 個數字，肯定係日期嗰行，將 Map 記錄低
+                if (foundDays >= 20) {
+                    dayColMap = tempMap;
+                    break; 
+                }
+            }
+
+            // 2. 智能尋找「員工行」
+            const combinedPool = [...salesPool, ...internPool];
+            for (let i = 0; i < rosterData.length; i++) {
+                let row = rosterData[i];
+                if (!row) continue;
+                
+                // 掃描頭 5 個 Columns 去搵人名，解決人名唔喺第一欄嘅問題
+                for (let c = 0; c < Math.min(5, row.length); c++) {
+                    let cellText = String(row[c]).toUpperCase();
+                    
+                    // 從名單中比對
+                    let matchedName = combinedPool.find(name => cellText.includes(name.toUpperCase()));
+                    
+                    // 確保搵到名，而且唔係標題列 (例如唔包含'姓名'、'日期'等字眼，但如果格入面有"姓名 Moon"就要容許，所以用 matchedName 雙重確認)
+                    if (matchedName && !cellText.includes('期:') && !cellText.includes('月份')) {
+                        staffData.push({
+                            id: matchedName, 
+                            rawName: String(row[c]).trim().replace(/\n/g, ' '), // 留低原名畀 HR 出勤表用
+                            rowIdx: i
+                        });
+                        break; // 搵到就跳去下一行
+                    }
+                }
+            }
+        }
 
         function updateHolidayHint(type) {
             const dateInput = document.getElementById(`${type}DutyDate`);
@@ -547,12 +541,12 @@
             const manualCheckbox = document.getElementById(`${type}ManualHoliday`);
             if (!dateInput || !dateInput.value || !hintEl) return;
             const dateStr = dateInput.value;
-            const isHoliday = isHKHoliday(dateStr);
+            const isHolidayDay = isHKHoliday(dateStr);
             const isWeekendDay = isWeekend(dateStr);
             if (manualCheckbox && manualCheckbox.checked) {
                 hintEl.textContent = '📌 手動設為假日';
                 hintEl.style.color = '#e60012';
-            } else if (isHoliday) {
+            } else if (isHolidayDay) {
                 hintEl.textContent = '🇭🇰 法定假期';
                 hintEl.style.color = '#2da44e';
             } else if (isWeekendDay) {
@@ -569,7 +563,6 @@
             document.getElementById('tvDutyDate').valueAsDate = new Date(); 
             loadSettings(); 
             
-            // 檢查數據庫狀態
             await checkDBStatus();
             
             try {
@@ -580,6 +573,8 @@
                     document.getElementById('uploadStatus').style.color = "#28a745";
                     
                     if (rosterData[1] && rosterData[1][0]) { const match = rosterData[1][0].match(/(\d{4})年(\d{1,2})月份/); if (match) { rosterYear = match[1]; rosterMonth = match[2]; daysInMonth = new Date(rosterYear, rosterMonth, 0).getDate(); } }
+                    
+                    processRosterData(); // 呼叫 AI 解析引擎
                     populateEmployeeDropdown(); 
                     generateMessage('vv'); 
                     generateMessage('tv'); 
@@ -610,18 +605,18 @@
         function loadSettings() {
             savedLogoBase64 = localStorage.getItem('hr_logo_base64');
             if(savedLogoBase64) { document.getElementById('hrLogoPreview').src = savedLogoBase64; document.getElementById('hrLogoPreview').style.display = 'block'; }
-            document.getElementById('vvWeekdayAmb').value = localStorage.getItem('vv_wk_amb_v15') || "15"; 
-            document.getElementById('vvHolidayAmb').value = localStorage.getItem('vv_hol_amb_v15') || "16";
+            document.getElementById('vvWeekdayAmb').value = localStorage.getItem('vv_wk_amb_v17') || "15"; 
+            document.getElementById('vvHolidayAmb').value = localStorage.getItem('vv_hol_amb_v17') || "16";
             document.getElementById('vvManualHoliday').checked = localStorage.getItem('vv_manual_holiday') === 'true';
             document.getElementById('tvManualHoliday').checked = localStorage.getItem('tv_manual_holiday') === 'true';
             
-            vvFlats = JSON.parse(localStorage.getItem('vv_flats_v15')) || JSON.parse(JSON.stringify(defaultVVFlats)); 
-            document.getElementById('vv_remarks').value = localStorage.getItem('vv_remarks_v15') || "#為已裝飾無改動示範單位\n*為已裝飾有改動示範單位\n\n示位單位狀況大致良好，均達開放標準。";
+            vvFlats = JSON.parse(localStorage.getItem('vv_flats_v17')) || JSON.parse(JSON.stringify(defaultVVFlats)); 
+            document.getElementById('vv_remarks').value = localStorage.getItem('vv_remarks_v17') || "#為已裝飾無改動示範單位\n*為已裝飾有改動示範單位\n\n示位單位狀況大致良好，均達開放標準。";
             
-            document.getElementById('tvWeekdayAmb').value = localStorage.getItem('tv_wk_amb_v15') || "3"; 
-            document.getElementById('tvHolidayAmb').value = localStorage.getItem('tv_hol_amb_v15') || "4";
-            tvFlats = JSON.parse(localStorage.getItem('tv_flats_v15')) || JSON.parse(JSON.stringify(defaultTVFlats)); 
-            document.getElementById('tv_remarks').value = localStorage.getItem('tv_remarks_v15') || "#為已裝飾無改動示範單位\n*為已裝飾有改動示範單位\n\n示位單位狀況大致良好，均達開放標準。";
+            document.getElementById('tvWeekdayAmb').value = localStorage.getItem('tv_wk_amb_v17') || "3"; 
+            document.getElementById('tvHolidayAmb').value = localStorage.getItem('tv_hol_amb_v17') || "4";
+            tvFlats = JSON.parse(localStorage.getItem('tv_flats_v17')) || JSON.parse(JSON.stringify(defaultTVFlats)); 
+            document.getElementById('tv_remarks').value = localStorage.getItem('tv_remarks_v17') || "#為已裝飾無改動示範單位\n*為已裝飾有改動示範單位\n\n示位單位狀況大致良好，均達開放標準。";
             
             renderFlats('vv'); 
             renderFlats('tv');
@@ -649,94 +644,57 @@
                     <button class="hr-btn-del" onclick="deleteFlat('${type}', ${index})">刪</button>
                 </div>`; 
             });
-            setTimeout(() => {
-                initSortable(type);
-            }, 50);
+            setTimeout(() => { initSortable(type); }, 50);
             generateMessage(type); 
         }
 
         function initSortable(type) { 
             const container = document.getElementById(`${type}FlatsContainer`);
             if (!container) return;
-            if (container._sortable) {
-                container._sortable.destroy();
-            }
+            if (container._sortable) { container._sortable.destroy(); }
             container._sortable = new Sortable(container, { 
-                handle: '.hr-drag-handle', 
-                animation: 150,
-                forceFallback: true,
-                fallbackTolerance: 3,
-                touchStartThreshold: 2,
+                handle: '.hr-drag-handle', animation: 150, forceFallback: true, fallbackTolerance: 3, touchStartThreshold: 2,
                 onEnd: function (evt) { 
                     const arr = type === 'vv' ? vvFlats : tvFlats; 
                     const item = arr.splice(evt.oldIndex, 1)[0]; 
                     arr.splice(evt.newIndex, 0, item); 
-                    saveSettings(type); 
-                    renderFlats(type); 
+                    saveSettings(type); renderFlats(type); 
                 } 
             }); 
         }
 
-        function addFlat(type) { 
-            (type === 'vv') ? vvFlats.push({ label: "", value: "" }) : tvFlats.push({ label: "", value: "" }); 
-            renderFlats(type); 
-            saveSettings(type); 
-        }
-        function updateFlat(type, index, field, value) { 
-            (type === 'vv') ? vvFlats[index][field] = value : tvFlats[index][field] = value; 
-            handleInput(type); 
-        }
-        function deleteFlat(type, index) { 
-            (type === 'vv') ? vvFlats.splice(index, 1) : tvFlats.splice(index, 1); 
-            renderFlats(type); 
-            saveSettings(type); 
-        }
+        function addFlat(type) { (type === 'vv') ? vvFlats.push({ label: "", value: "" }) : tvFlats.push({ label: "", value: "" }); renderFlats(type); saveSettings(type); }
+        function updateFlat(type, index, field, value) { (type === 'vv') ? vvFlats[index][field] = value : tvFlats[index][field] = value; handleInput(type); }
+        function deleteFlat(type, index) { (type === 'vv') ? vvFlats.splice(index, 1) : tvFlats.splice(index, 1); renderFlats(type); saveSettings(type); }
         
         function handleInput(type) { 
             const manualCheckbox = document.getElementById(`${type}ManualHoliday`);
-            if (manualCheckbox) {
-                localStorage.setItem(`${type}_manual_holiday`, manualCheckbox.checked);
-            }
-            updateHolidayHint(type);
-            generateMessage(type); 
-            saveSettings(type); 
+            if (manualCheckbox) localStorage.setItem(`${type}_manual_holiday`, manualCheckbox.checked);
+            updateHolidayHint(type); generateMessage(type); saveSettings(type); 
         }
         
         function saveSettings(type) {
             if (type === 'vv') { 
-                localStorage.setItem('vv_flats_v15', JSON.stringify(vvFlats)); 
-                localStorage.setItem('vv_remarks_v15', document.getElementById('vv_remarks').value); 
-                localStorage.setItem('vv_wk_amb_v15', document.getElementById('vvWeekdayAmb').value); 
-                localStorage.setItem('vv_hol_amb_v15', document.getElementById('vvHolidayAmb').value); 
+                localStorage.setItem('vv_flats_v17', JSON.stringify(vvFlats)); 
+                localStorage.setItem('vv_remarks_v17', document.getElementById('vv_remarks').value); 
+                localStorage.setItem('vv_wk_amb_v17', document.getElementById('vvWeekdayAmb').value); 
+                localStorage.setItem('vv_hol_amb_v17', document.getElementById('vvHolidayAmb').value); 
             } else { 
-                localStorage.setItem('tv_flats_v15', JSON.stringify(tvFlats)); 
-                localStorage.setItem('tv_remarks_v15', document.getElementById('tv_remarks').value); 
-                localStorage.setItem('tv_wk_amb_v15', document.getElementById('tvWeekdayAmb').value); 
-                localStorage.setItem('tv_hol_amb_v15', document.getElementById('tvHolidayAmb').value); 
+                localStorage.setItem('tv_flats_v17', JSON.stringify(tvFlats)); 
+                localStorage.setItem('tv_remarks_v17', document.getElementById('tv_remarks').value); 
+                localStorage.setItem('tv_wk_amb_v17', document.getElementById('tvWeekdayAmb').value); 
+                localStorage.setItem('tv_hol_amb_v17', document.getElementById('tvHolidayAmb').value); 
             }
             const badge = document.getElementById(`${type}SaveBadge`); 
-            badge.style.display = 'inline'; 
-            setTimeout(() => { badge.style.display = 'none'; }, 2000);
+            badge.style.display = 'inline'; setTimeout(() => { badge.style.display = 'none'; }, 2000);
         }
 
-        // ===== Excel 讀取（手機修正） =====
+        // ===== Excel 讀取 =====
         document.getElementById('excelFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const errorEl = document.getElementById('uploadError');
             errorEl.style.display = 'none';
-            
-            if (!file) {
-                errorEl.textContent = '❌ 未選擇檔案';
-                errorEl.style.display = 'block';
-                return;
-            }
-            
-            const validTypes = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'];
-            if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
-                errorEl.textContent = '❌ 請上載 .xlsx, .xls 或 .csv 格式檔案';
-                errorEl.style.display = 'block';
-                return;
-            }
+            if (!file) { errorEl.textContent = '❌ 未選擇檔案'; errorEl.style.display = 'block'; return; }
             
             const reader = new FileReader();
             document.getElementById('uploadStatus').innerText = `🔄 正在讀取檔案...`;
@@ -752,107 +710,146 @@
                     document.getElementById('uploadStatus').style.color = "#28a745";
                     
                     if (rosterData[1] && rosterData[1][0]) { const match = rosterData[1][0].match(/(\d{4})年(\d{1,2})月份/); if (match) { rosterYear = match[1]; rosterMonth = match[2]; daysInMonth = new Date(rosterYear, rosterMonth, 0).getDate(); } }
+                    
+                    processRosterData(); // 呼叫 AI 解析引擎
                     populateEmployeeDropdown(); 
                     generateMessage('vv'); 
                     generateMessage('tv');
                     
-                    // 更新數據庫狀態
                     checkDBStatus();
                     alert('✅ 更表上載成功！');
                 } catch (error) {
                     document.getElementById('uploadStatus').innerText = "❌ 讀取失敗";
                     document.getElementById('uploadStatus').style.color = "#d9534f";
-                    errorEl.textContent = '❌ ' + error.message;
-                    errorEl.style.display = 'block';
+                    errorEl.textContent = '❌ ' + error.message; errorEl.style.display = 'block';
                 }
-            };
-            reader.onerror = function() {
-                document.getElementById('uploadStatus').innerText = "❌ 讀取失敗";
-                document.getElementById('uploadStatus').style.color = "#d9534f";
-                errorEl.textContent = '❌ 無法讀取檔案，請確認檔案是否損毀';
-                errorEl.style.display = 'block';
             };
             reader.readAsArrayBuffer(file);
         });
 
-        // ===== HR 出勤表 =====
         function parseShiftToHR(shiftValue) { let val = (shiftValue || "").toString().trim().toUpperCase(); if (!val) return { time: '--', desc: '--', hours: '--' }; if (EXACT_LEAVE_TYPES[val]) return { time: EXACT_LEAVE_TYPES[val], desc: EXACT_LEAVE_TYPES[val] + '一天', hours: '--' }; for (const [symbol, leaveName] of Object.entries(SYMBOL_LEAVE_TYPES)) { if (val.includes(symbol)) return { time: leaveName, desc: leaveName + '一天', hours: '--' }; } let locations = []; let timeRange = ''; let foundWork = false; val.split('/').forEach(p => { const trimmed = p.trim(); if (WORK_LOCATIONS[trimmed]) { foundWork = true; locations.push(WORK_LOCATIONS[trimmed].desc); if (timeRange === '') timeRange = WORK_LOCATIONS[trimmed].time; } }); if (foundWork) return { time: timeRange, desc: locations.join(' / '), hours: 8.5 }; return { time: '--', desc: val, hours: '--' }; }
         
+        // ===== 利用智能引擎生成當值名單 =====
         function generateMessage(type) {
             const isVV = type === 'vv';
-            const dateInput = document.getElementById(`${type}DutyDate`).value; 
+            const dateInput = document.getElementById(`${type}DutyDate`).value;
             if (!dateInput) return;
-            const d = new Date(dateInput); 
-            const weekdayNum = d.getDay(); 
+            const d = new Date(dateInput);
+            const weekdayNum = d.getDay();
+            const targetDay = d.getDate();
             const formattedDate = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} (${["日","一","二","三","四","五","六"][weekdayNum]})`;
             const customWkAmb = document.getElementById(`${type}WeekdayAmb`).value || (isVV ? "15" : "3");
             const customHolAmb = document.getElementById(`${type}HolidayAmb`).value || (isVV ? "16" : "4");
-            
+
             const manualCheckboxId = `${type}ManualHoliday`;
             const isHolidayDay = isHoliday(dateInput, manualCheckboxId);
             let ambassadorCount = isHolidayDay ? customHolAmb : customWkAmb;
-            
+
             let salesToday = [], internToday = [];
-            if (rosterData.length > 0) {
-                const targetCol = d.getDate() + 2; 
-                for (let i = 4; i < rosterData.length; i++) {
-                    let row = rosterData[i]; if (!row || !row[0]) continue; 
-                    let cellName = String(row[0]), shiftValue = String(row[targetCol] || "").trim().toUpperCase();
-                    if (isVV && (shiftValue.includes('VV') || shiftValue.includes('VW'))) {
-                        salesPool.forEach(n => { if (cellName.includes(n) && !salesToday.includes(n)) salesToday.push(n); });
-                        internPool.forEach(n => { if (cellName.includes(n) && !internToday.includes(n)) internToday.push(n); });
-                    } else if (!isVV && shiftValue.includes('TV')) {
-                        salesPool.forEach(n => { if (cellName.includes(n) && !salesToday.includes(n)) salesToday.push(n); });
-                    }
+            
+            // 確保資料已載入，並且成功搵到日期欄位
+            if (rosterData.length > 0 && Object.keys(dayColMap).length > 0) {
+                const colIdx = dayColMap[targetDay]; 
+                
+                if (colIdx !== undefined) {
+                    staffData.forEach(staff => {
+                        // 去對應嘅 row 同 column 攞出更期字眼
+                        let shiftValue = String(rosterData[staff.rowIdx][colIdx] || "").toUpperCase();
+                        if (!shiftValue) return;
+                        
+                        let isIntern = internPool.includes(staff.id);
+                        let isWorking = false;
+                        
+                        // 用 includes 去解決癡埋一齊嘅字眼，例如 'TVVV' 包含 'TV' 也包含 'VV'
+                        if (isVV && (shiftValue.includes('VV') || shiftValue.includes('VW'))) {
+                            isWorking = true;
+                        } else if (!isVV && shiftValue.includes('TV')) {
+                            isWorking = true;
+                        }
+                        
+                        if (isWorking) {
+                            if (isIntern) {
+                                if (!internToday.includes(staff.id)) internToday.push(staff.id);
+                            } else {
+                                if (!salesToday.includes(staff.id)) salesToday.push(staff.id);
+                            }
+                        }
+                    });
                 }
             }
-            let showflatText = ""; const flatsArr = isVV ? vvFlats : tvFlats;
+            
+            let showflatText = "";
+            const flatsArr = isVV ? vvFlats : tvFlats;
             flatsArr.forEach(flat => { if (flat.label.trim() && flat.value.trim()) showflatText += `${flat.label}：${flat.value}\n`; });
             showflatText += `\n${document.getElementById(`${type}_remarks`).value.trim()}`;
-            const projName = isVV ? "維港‧灣畔現樓" : "維港‧雙鑽現樓"; const cleanerCount = isVV ? 3 : 1;
+            
+            const projName = isVV ? "維港‧灣畔現樓" : "維港‧雙鑽現樓";
+            const cleanerCount = isVV ? 3 : 1;
+            
             let msg = `${projName}\n${formattedDate}\n\n⏰當值時間：10:30pm-7:00pm\n\n👤當值人員\n`;
             msg += `銷售 ：${salesToday.length ? salesToday.join(', ') + ' (' + salesToday.length + '人)' : '無 (0人)'}\n`;
             if (isVV) msg += `實習生：${internToday.length ? internToday.join(', ') + ' (' + internToday.length + '人)' : '無 (0人)'}\n`;
             msg += `服務大使：${ambassadorCount}人\n清潔：${cleanerCount}人\n\n「開放示範單位」：\n${showflatText}`;
+            
             document.getElementById(`${type}ResultMessage`).value = msg;
         }
         
+        // HR Dropdown 直接用智能引擎搵出嚟嘅人名！乾淨俐落！
         function populateEmployeeDropdown() {
-            employeeList = []; const select = document.getElementById('hrEmployeeSelect'); select.innerHTML = '<option value="">-- 請選擇員工 --</option>';
-            for (let i = 4; i < rosterData.length; i++) {
-                let row = rosterData[i];
-                if (row && row[0] && typeof row[0] === 'string' && row[1] && typeof row[1] === 'string' && row[1].includes('(')) {
-                    let name = row[0].trim(); employeeList.push({ name: name, rowIndex: i }); select.innerHTML += `<option value="${i}">${name}</option>`;
-                }
-            }
+            const select = document.getElementById('hrEmployeeSelect'); 
+            select.innerHTML = '<option value="">-- 請選擇員工 --</option>';
+            
+            staffData.forEach(staff => {
+                select.innerHTML += `<option value="${staff.id}">${staff.rawName}</option>`;
+            });
         }
+        
         function loadEmployeeData() {
             const select = document.getElementById('hrEmployeeSelect'); if (!select.value) return;
-            const name = select.options[select.selectedIndex].text; const saved = localStorage.getItem('hr_data_' + name);
+            const staffId = select.value;
+            const saved = localStorage.getItem('hr_data_' + staffId);
             if (saved) { const data = JSON.parse(saved); document.getElementById('hrPosition').value = data.position || ''; document.getElementById('hrEmpId').value = data.empId || ''; } 
             else { document.getElementById('hrPosition').value = ''; document.getElementById('hrEmpId').value = ''; }
         }
         function saveEmployeeData() {
             const select = document.getElementById('hrEmployeeSelect'); if (!select.value) return;
-            const name = select.options[select.selectedIndex].text;
-            localStorage.setItem('hr_data_' + name, JSON.stringify({ position: document.getElementById('hrPosition').value.trim(), empId: document.getElementById('hrEmpId').value.trim() }));
+            const staffId = select.value;
+            localStorage.setItem('hr_data_' + staffId, JSON.stringify({ position: document.getElementById('hrPosition').value.trim(), empId: document.getElementById('hrEmpId').value.trim() }));
         }
+        
         function exportToWord() {
-            const select = document.getElementById('hrEmployeeSelect'); if (!select.value) { alert("請先上載更表並選擇員工！"); return; }
-            const rowIndex = parseInt(select.value); const empName = select.options[select.selectedIndex].text;
-            const position = document.getElementById('hrPosition').value.trim(); const empId = document.getElementById('hrEmpId').value.trim();
+            const select = document.getElementById('hrEmployeeSelect'); 
+            if (!select.value) { alert("請先上載更表並選擇員工！"); return; }
+            
+            const staffId = select.value; 
+            const staffObj = staffData.find(s => s.id === staffId);
+            if (!staffObj) return;
+            
+            const rowIndex = staffObj.rowIdx;
+            const empName = staffObj.rawName;
+            
+            const position = document.getElementById('hrPosition').value.trim(); 
+            const empId = document.getElementById('hrEmpId').value.trim();
             if (!rosterYear || !rosterMonth) { alert("無法從 Excel 讀取年月，請確保格式正確。"); return; }
-            const rowData = rosterData[rowIndex]; let totalHours = 0;
+            
+            const rowData = rosterData[rowIndex]; 
+            let totalHours = 0;
             let imgHtml = savedLogoBase64 ? `<img src="${savedLogoBase64}" style="width: 250px; height: auto;" />` : `<h3 style="color:#0056b3;">[未上載公司 Logo]</h3>`;
             let htmlContent = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>body { font-family: 'MingLiU', 'PMingLiU', 'Microsoft JhengHei', sans-serif; font-size: 12pt; } table { width: 100%; border-collapse: collapse; margin-bottom: 10px; } th, td { border: 1px solid black; padding: 6px; text-align: center; } .meta-table td { border: none; text-align: left; padding: 2px; } h2 { text-align: center; font-size: 16pt; margin-bottom: 20px; } .logo-container { text-align: left; margin-bottom: 15px; } </style></head><body><div class="logo-container">${imgHtml}</div><h2>手寫出勤記錄表 ( ${rosterYear} )年(${rosterMonth})月份</h2><table class="meta-table"><tr><td style="width: 25%;">姓名：${empName}</td><td style="width: 25%;">職位：${position}</td><td style="width: 25%;">部門/地盤：營業部</td><td style="width: 25%;">員工編號：${empId}</td></tr></table><table><tr><th style="width: 10%;">日</th><th style="width: 30%;">工作起止時間</th><th style="width: 45%;">工作內容</th><th style="width: 15%;">共計</th></tr>`;
+            
+            // 用 dayColMap 解決 HR 表格走位問題
             for (let day = 1; day <= daysInMonth; day++) {
-                const parsed = parseShiftToHR(rowData[day + 2]);
+                let colIdx = dayColMap[day];
+                let shiftVal = colIdx !== undefined ? rowData[colIdx] : "";
+                const parsed = parseShiftToHR(shiftVal);
                 htmlContent += `<tr><td>${day}</td><td>${parsed.time}</td><td>${parsed.desc}</td><td>${parsed.hours === '--' ? '--' : parsed.hours + '小時'}</td></tr>`;
                 if (typeof parsed.hours === 'number') totalHours += parsed.hours;
             }
             htmlContent += `</table><p style="text-align: right; margin-top: 10px; font-weight: bold;">總計時數：${totalHours} 小時</p></body></html>`;
             const monthsEng = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            const monthWord = monthsEng[parseInt(rosterMonth) - 1] || rosterMonth; const safeName = empName.replace(/ /g, '_');
+            const monthWord = monthsEng[parseInt(rosterMonth) - 1] || rosterMonth; 
+            
+            const safeName = staffObj.id.replace(/ /g, '_');
             const fileDownload = document.createElement("a"); document.body.appendChild(fileDownload);
             fileDownload.href = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(htmlContent); fileDownload.download = `${safeName}出勤記錄表${monthWord} ${rosterYear}.doc`; fileDownload.click(); document.body.removeChild(fileDownload);
         }
@@ -867,46 +864,18 @@
             const html = document.documentElement;
 
             const savedTheme = localStorage.getItem('cohl-theme');
-            if (savedTheme === 'dark') {
-                html.setAttribute('data-theme', 'dark');
-                icon.textContent = '☀️';
-                label.textContent = '淺色';
-            }
+            if (savedTheme === 'dark') { html.setAttribute('data-theme', 'dark'); icon.textContent = '☀️'; label.textContent = '淺色'; }
 
             toggle.addEventListener('click', function() {
                 const isDark = html.getAttribute('data-theme') === 'dark';
-                if (isDark) {
-                    html.removeAttribute('data-theme');
-                    localStorage.setItem('cohl-theme', 'light');
-                    icon.textContent = '🌙';
-                    label.textContent = '深色';
-                } else {
-                    html.setAttribute('data-theme', 'dark');
-                    localStorage.setItem('cohl-theme', 'dark');
-                    icon.textContent = '☀️';
-                    label.textContent = '淺色';
-                }
+                if (isDark) { html.removeAttribute('data-theme'); localStorage.setItem('cohl-theme', 'light'); icon.textContent = '🌙'; label.textContent = '深色'; } 
+                else { html.setAttribute('data-theme', 'dark'); localStorage.setItem('cohl-theme', 'dark'); icon.textContent = '☀️'; label.textContent = '淺色'; }
             });
         })();
 
         // ===== 下拉菜單 =====
-        document.querySelectorAll('.dropdown-toggle').forEach(function(toggle) {
-            toggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                var parent = this.closest('.dropdown');
-                if (parent) {
-                    parent.classList.toggle('open');
-                }
-            });
-        });
-
-        document.addEventListener('click', function(e) {
-            document.querySelectorAll('.dropdown.open').forEach(function(dropdown) {
-                if (!dropdown.contains(e.target)) {
-                    dropdown.classList.remove('open');
-                }
-            });
-        });
+        document.querySelectorAll('.dropdown-toggle').forEach(function(toggle) { toggle.addEventListener('click', function(e) { e.preventDefault(); var parent = this.closest('.dropdown'); if (parent) { parent.classList.toggle('open'); } }); });
+        document.addEventListener('click', function(e) { document.querySelectorAll('.dropdown.open').forEach(function(dropdown) { if (!dropdown.contains(e.target)) { dropdown.classList.remove('open'); } }); });
     </script>
 </body>
 </html>

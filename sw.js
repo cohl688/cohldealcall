@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cohl-sales-tech-v12';
+const CACHE_NAME = 'cohl-sales-tech-v15';
 const ASSETS_TO_CACHE = [
   './index.html',
   './style.css',
