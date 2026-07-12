@@ -100,6 +100,13 @@
         .hr-body .file-upload-wrapper .upload-actions .btn-reset:hover {
             background: #c9302c;
         }
+        .hr-body .file-upload-wrapper .upload-actions .btn-fix-db {
+            background: #f0ad4e;
+            color: #fff;
+        }
+        .hr-body .file-upload-wrapper .upload-actions .btn-fix-db:hover {
+            background: #ec971f;
+        }
         @media (max-width: 480px) {
             .hr-body .file-upload-wrapper .upload-actions {
                 flex-direction: column;
@@ -114,6 +121,24 @@
                 font-size: 16px;
                 min-height: 60px;
             }
+        }
+        .hr-body .db-status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 3px;
+            margin-top: 4px;
+        }
+        .hr-body .db-status.error {
+            color: #d9534f;
+            background: rgba(217, 83, 79, 0.1);
+        }
+        .hr-body .db-status.success {
+            color: #2da44e;
+            background: rgba(45, 164, 78, 0.1);
+        }
+        .hr-body .db-status.warning {
+            color: #f0ad4e;
+            background: rgba(240, 173, 78, 0.1);
         }
     </style>
 </head>
@@ -167,11 +192,14 @@
         <div id="globalUpload" class="hr-section" style="border-left-color: #333; background: #f0f0f0;">
             <label id="rosterUploadLabel">📂 更表 Excel 設定</label>
             
+            <div id="dbStatus" class="db-status warning">⏳ 檢查數據庫狀態...</div>
+            
             <div class="file-upload-wrapper" id="rosterUploadRow">
                 <input type="file" id="excelFile" accept=".xlsx, .xls">
                 <div class="upload-actions">
                     <button class="btn-upload" onclick="triggerFileUpload()">📤 選擇檔案上載</button>
                     <button class="btn-reset" onclick="resetRoster()">🔄 清除數據重新上載</button>
+                    <button class="btn-fix-db" onclick="fixDatabase()">🔧 修復數據庫</button>
                 </div>
             </div>
             
@@ -339,25 +367,95 @@
         }
 
         // ==========================================
-        // IndexedDB - 修正版本號與建立 Store
+        // IndexedDB - 穩定修正版
         // ==========================================
         const DB_NAME = "ColiAppDB";
         const STORE_ROSTER = "RosterStore";
-        const DB_VERSION = 3;  // 升到 3，確保建立 Store
+        const DB_VERSION = 4;  // 升到 v4，確保建立 Store
 
         function openDB() {
             return new Promise((resolve, reject) => {
                 const req = indexedDB.open(DB_NAME, DB_VERSION);
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
-                    // 如果不存在 RosterStore，就建立
+                    // 強制確保 RosterStore 存在
                     if (!db.objectStoreNames.contains(STORE_ROSTER)) {
                         db.createObjectStore(STORE_ROSTER, { keyPath: "id" });
                     }
                 };
-                req.onsuccess = (e) => resolve(e.target.result);
-                req.onerror = (e) => reject(e.target.error);
+                req.onsuccess = (e) => {
+                    resolve(e.target.result);
+                };
+                req.onerror = (e) => {
+                    reject(e.target.error);
+                };
             });
+        }
+
+        // 檢查數據庫狀態
+        async function checkDBStatus() {
+            const statusEl = document.getElementById('dbStatus');
+            try {
+                const db = await openDB();
+                if (db.objectStoreNames.contains(STORE_ROSTER)) {
+                    statusEl.textContent = '✅ 數據庫狀態正常 (RosterStore 已就緒)';
+                    statusEl.className = 'db-status success';
+                } else {
+                    statusEl.textContent = '⚠️ RosterStore 不存在，請點擊「修復數據庫」';
+                    statusEl.className = 'db-status warning';
+                }
+                db.close();
+                return true;
+            } catch (e) {
+                statusEl.textContent = '❌ 數據庫錯誤: ' + e.message;
+                statusEl.className = 'db-status error';
+                return false;
+            }
+        }
+
+        // 修復數據庫 - 刪除舊 DB 重新建立
+        async function fixDatabase() {
+            if (!confirm("此操作將刪除所有更表數據並重建數據庫，確定繼續嗎？")) return;
+            
+            const statusEl = document.getElementById('dbStatus');
+            statusEl.textContent = '⏳ 正在修復數據庫...';
+            statusEl.className = 'db-status warning';
+            
+            try {
+                // 關閉所有連接
+                const db = await openDB();
+                db.close();
+                
+                // 刪除整個數據庫
+                await new Promise((resolve, reject) => {
+                    const req = indexedDB.deleteDatabase(DB_NAME);
+                    req.onsuccess = () => resolve();
+                    req.onerror = () => reject(req.error);
+                });
+                
+                // 重新打開（會觸發 onupgradeneeded 建立 Store）
+                const newDb = await openDB();
+                newDb.close();
+                
+                // 重置數據
+                rosterData = [];
+                document.getElementById('uploadStatus').innerText = "⚠️ 數據庫已重建，請重新上載更表";
+                document.getElementById('uploadStatus').style.color = "#d9534f";
+                document.getElementById('excelFile').value = '';
+                document.getElementById('hrEmployeeSelect').innerHTML = '<option value="">-- 請先上載 Excel --</option>';
+                document.getElementById('vvResultMessage').value = '請先上載 Excel...';
+                document.getElementById('tvResultMessage').value = '請先上載 Excel...';
+                document.getElementById('uploadError').style.display = 'none';
+                
+                statusEl.textContent = '✅ 數據庫已重建成功！請重新上載更表';
+                statusEl.className = 'db-status success';
+                alert('✅ 數據庫已成功修復！請重新上載更表 Excel。');
+                
+            } catch (e) {
+                statusEl.textContent = '❌ 修復失敗: ' + e.message;
+                statusEl.className = 'db-status error';
+                alert('❌ 修復失敗，請嘗試清除瀏覽器數據或使用其他瀏覽器。\n錯誤: ' + e.message);
+            }
         }
 
         async function saveDataToDB(storeName, dataId, data) {
@@ -367,10 +465,13 @@
                     const tx = db.transaction([storeName], "readwrite");
                     const store = tx.objectStore(storeName);
                     store.put({ id: dataId, data: data });
-                    tx.oncomplete = resolve;
-                    tx.onerror = reject;
+                    tx.oncomplete = () => { db.close(); resolve(); };
+                    tx.onerror = () => { db.close(); reject(tx.error); };
                 });
-            } catch(e) { console.error("DB Save Error", e); throw e; }
+            } catch(e) {
+                console.error("DB Save Error", e);
+                throw e;
+            }
         }
 
         async function loadDataFromDB(storeName, dataId) {
@@ -380,14 +481,17 @@
                     const tx = db.transaction([storeName], "readonly");
                     const store = tx.objectStore(storeName);
                     const req = store.get(dataId);
-                    req.onsuccess = () => resolve(req.result ? req.result.data : null);
-                    req.onerror = reject;
+                    req.onsuccess = () => { db.close(); resolve(req.result ? req.result.data : null); };
+                    req.onerror = () => { db.close(); reject(req.error); };
                 });
-            } catch(e) { console.error("DB Load Error", e); return null; }
+            } catch(e) {
+                console.error("DB Load Error", e);
+                return null;
+            }
         }
 
         // ==========================================
-        // 重置更表（更安全）
+        // 重置更表
         // ==========================================
         function resetRoster() {
             if(confirm("確定要清除現有更表數據並重新上載嗎？")) {
@@ -396,16 +500,24 @@
                 document.getElementById('uploadStatus').style.color = "#d9534f";
                 document.getElementById('uploadError').style.display = 'none';
                 document.getElementById('excelFile').value = '';
-                // 嘗試清除 DB
+                
+                // 嘗試清除 DB 記錄
                 openDB().then(db => {
                     if (db.objectStoreNames.contains(STORE_ROSTER)) {
                         const tx = db.transaction([STORE_ROSTER], "readwrite");
                         tx.objectStore(STORE_ROSTER).delete("rosterData");
+                        tx.oncomplete = () => { db.close(); };
+                    } else {
+                        db.close();
                     }
                 }).catch(() => {});
+                
                 document.getElementById('hrEmployeeSelect').innerHTML = '<option value="">-- 請先上載 Excel --</option>';
                 document.getElementById('vvResultMessage').value = '請先上載 Excel...';
                 document.getElementById('tvResultMessage').value = '請先上載 Excel...';
+                
+                // 更新數據庫狀態
+                checkDBStatus();
             }
         }
 
@@ -457,6 +569,9 @@
             document.getElementById('tvDutyDate').valueAsDate = new Date(); 
             loadSettings(); 
             
+            // 檢查數據庫狀態
+            await checkDBStatus();
+            
             try {
                 const savedRoster = await loadDataFromDB(STORE_ROSTER, "rosterData");
                 if (savedRoster && savedRoster.length > 0) {
@@ -473,8 +588,10 @@
                     document.getElementById('uploadStatus').style.color = "#d9534f";
                 }
             } catch (e) {
-                document.getElementById('uploadStatus').innerText = "⚠️ 讀取數據庫失敗，請重新上載";
+                document.getElementById('uploadStatus').innerText = "⚠️ 讀取數據庫失敗，請點擊「修復數據庫」後重新上載";
                 document.getElementById('uploadStatus').style.color = "#d9534f";
+                document.getElementById('uploadError').textContent = '錯誤: ' + e.message;
+                document.getElementById('uploadError').style.display = 'block';
             }
             
             updateHolidayHint('vv');
@@ -638,6 +755,9 @@
                     populateEmployeeDropdown(); 
                     generateMessage('vv'); 
                     generateMessage('tv');
+                    
+                    // 更新數據庫狀態
+                    checkDBStatus();
                     alert('✅ 更表上載成功！');
                 } catch (error) {
                     document.getElementById('uploadStatus').innerText = "❌ 讀取失敗";
