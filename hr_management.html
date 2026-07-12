@@ -51,7 +51,6 @@
         .hr-body .hr-unit-row {
             touch-action: none;
         }
-        /* 手機上載按鈕加大 */
         .hr-body .file-upload-wrapper {
             display: flex;
             flex-direction: column;
@@ -168,7 +167,6 @@
         <div id="globalUpload" class="hr-section" style="border-left-color: #333; background: #f0f0f0;">
             <label id="rosterUploadLabel">📂 更表 Excel 設定</label>
             
-            <!-- 上傳區域（手機版加大 touch 範圍） -->
             <div class="file-upload-wrapper" id="rosterUploadRow">
                 <input type="file" id="excelFile" accept=".xlsx, .xls">
                 <div class="upload-actions">
@@ -304,7 +302,7 @@
         }
 
         // ==========================================
-        // 語言切換（HR 頁面專用）
+        // 語言切換
         // ==========================================
         const translations = {
             'zh-HK': {
@@ -341,19 +339,21 @@
         }
 
         // ==========================================
-        // 完整 JavaScript（保留原功能）
+        // IndexedDB - 修正版本號與建立 Store
         // ==========================================
-
         const DB_NAME = "ColiAppDB";
         const STORE_ROSTER = "RosterStore";
-        const DB_VERSION = 2;
+        const DB_VERSION = 3;  // 升到 3，確保建立 Store
 
         function openDB() {
             return new Promise((resolve, reject) => {
                 const req = indexedDB.open(DB_NAME, DB_VERSION);
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
-                    if (!db.objectStoreNames.contains(STORE_ROSTER)) db.createObjectStore(STORE_ROSTER, { keyPath: "id" });
+                    // 如果不存在 RosterStore，就建立
+                    if (!db.objectStoreNames.contains(STORE_ROSTER)) {
+                        db.createObjectStore(STORE_ROSTER, { keyPath: "id" });
+                    }
                 };
                 req.onsuccess = (e) => resolve(e.target.result);
                 req.onerror = (e) => reject(e.target.error);
@@ -370,7 +370,7 @@
                     tx.oncomplete = resolve;
                     tx.onerror = reject;
                 });
-            } catch(e) { console.error("DB Save Error", e); }
+            } catch(e) { console.error("DB Save Error", e); throw e; }
         }
 
         async function loadDataFromDB(storeName, dataId) {
@@ -386,31 +386,36 @@
             } catch(e) { console.error("DB Load Error", e); return null; }
         }
 
+        // ==========================================
+        // 重置更表（更安全）
+        // ==========================================
         function resetRoster() {
             if(confirm("確定要清除現有更表數據並重新上載嗎？")) {
                 rosterData = [];
                 document.getElementById('uploadStatus').innerText = "⚠️ 數據已清除，請重新選擇檔案上載";
                 document.getElementById('uploadStatus').style.color = "#d9534f";
                 document.getElementById('uploadError').style.display = 'none';
-                // 清空 file input
                 document.getElementById('excelFile').value = '';
+                // 嘗試清除 DB
                 openDB().then(db => {
-                    const tx = db.transaction([STORE_ROSTER], "readwrite");
-                    tx.objectStore(STORE_ROSTER).delete("rosterData");
-                });
-                // 重置下拉選單
+                    if (db.objectStoreNames.contains(STORE_ROSTER)) {
+                        const tx = db.transaction([STORE_ROSTER], "readwrite");
+                        tx.objectStore(STORE_ROSTER).delete("rosterData");
+                    }
+                }).catch(() => {});
                 document.getElementById('hrEmployeeSelect').innerHTML = '<option value="">-- 請先上載 Excel --</option>';
-                // 清空結果
                 document.getElementById('vvResultMessage').value = '請先上載 Excel...';
                 document.getElementById('tvResultMessage').value = '請先上載 Excel...';
             }
         }
 
-        // 手機觸發 file input
         function triggerFileUpload() {
             document.getElementById('excelFile').click();
         }
 
+        // ==========================================
+        // 核心變數與功能
+        // ==========================================
         let rosterData = []; 
         let rosterYear = ""; let rosterMonth = ""; let daysInMonth = 31;
         let employeeList = []; 
@@ -452,25 +457,29 @@
             document.getElementById('tvDutyDate').valueAsDate = new Date(); 
             loadSettings(); 
             
-            const savedRoster = await loadDataFromDB(STORE_ROSTER, "rosterData");
-            if (savedRoster && savedRoster.length > 0) {
-                rosterData = savedRoster;
-                document.getElementById('uploadStatus').innerText = `✅ 更表數據庫已永久內置 (${rosterData.length} 行數據)`;
-                document.getElementById('uploadStatus').style.color = "#28a745";
-                
-                if (rosterData[1] && rosterData[1][0]) { const match = rosterData[1][0].match(/(\d{4})年(\d{1,2})月份/); if (match) { rosterYear = match[1]; rosterMonth = match[2]; daysInMonth = new Date(rosterYear, rosterMonth, 0).getDate(); } }
-                populateEmployeeDropdown(); 
-                generateMessage('vv'); 
-                generateMessage('tv'); 
-            } else {
-                document.getElementById('uploadStatus').innerText = "⚠️ 未讀取更表數據，請上載 Excel";
+            try {
+                const savedRoster = await loadDataFromDB(STORE_ROSTER, "rosterData");
+                if (savedRoster && savedRoster.length > 0) {
+                    rosterData = savedRoster;
+                    document.getElementById('uploadStatus').innerText = `✅ 更表數據庫已永久內置 (${rosterData.length} 行數據)`;
+                    document.getElementById('uploadStatus').style.color = "#28a745";
+                    
+                    if (rosterData[1] && rosterData[1][0]) { const match = rosterData[1][0].match(/(\d{4})年(\d{1,2})月份/); if (match) { rosterYear = match[1]; rosterMonth = match[2]; daysInMonth = new Date(rosterYear, rosterMonth, 0).getDate(); } }
+                    populateEmployeeDropdown(); 
+                    generateMessage('vv'); 
+                    generateMessage('tv'); 
+                } else {
+                    document.getElementById('uploadStatus').innerText = "⚠️ 未讀取更表數據，請上載 Excel";
+                    document.getElementById('uploadStatus').style.color = "#d9534f";
+                }
+            } catch (e) {
+                document.getElementById('uploadStatus').innerText = "⚠️ 讀取數據庫失敗，請重新上載";
                 document.getElementById('uploadStatus').style.color = "#d9534f";
             }
             
             updateHolidayHint('vv');
             updateHolidayHint('tv');
             
-            // 載入語言
             const savedLang = localStorage.getItem('cohl_lang') || 'zh-HK';
             switchLang(savedLang);
         };
@@ -593,7 +602,7 @@
             setTimeout(() => { badge.style.display = 'none'; }, 2000);
         }
 
-        // ===== Excel 讀取（修正手機版） =====
+        // ===== Excel 讀取（手機修正） =====
         document.getElementById('excelFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const errorEl = document.getElementById('uploadError');
@@ -605,7 +614,6 @@
                 return;
             }
             
-            // 檢查檔案類型
             const validTypes = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'];
             if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
                 errorEl.textContent = '❌ 請上載 .xlsx, .xls 或 .csv 格式檔案';
