@@ -51,7 +51,7 @@
         </div>
         <button class="theme-toggle" id="themeToggle" aria-label="切換深色模式">
             <span id="themeIcon">🌙</span>
-            <span class="toggle-label" id="themeLabel">深色</span>
+            <span class="toggle-label" id="themeLabel" data-i18n="theme_label">深色</span>
         </button>
     </nav>
 
@@ -110,13 +110,24 @@
     </footer>
 
     <script>
+        // ===== Service Worker 註冊 =====
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); });
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .catch(err => console.log('⚠️ Service Worker registration failed:', err));
+            });
         }
+
+        // ===== PWA 安裝 =====
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault(); deferredPrompt = e; document.getElementById('pwa-install-banner').style.display = 'block';
+            e.preventDefault();
+            deferredPrompt = e;
+            if (!window.matchMedia('(display-mode: standalone)').matches) {
+                document.getElementById('pwa-install-banner').style.display = 'block';
+            }
         });
+
         function installPWA() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
@@ -160,7 +171,8 @@
                 'card_vvcp_sub': 'VVCP',
                 'footer_home': '主頁',
                 'footer_website': '官方網站',
-                'footer_contact': '聯絡我們'
+                'footer_contact': '聯絡我們',
+                'theme_label': '深色'
             },
             'zh-CN': {
                 'nav_home': '主页',
@@ -193,7 +205,8 @@
                 'card_vvcp_sub': 'VVCP',
                 'footer_home': '主页',
                 'footer_website': '官方网站',
-                'footer_contact': '联系我们'
+                'footer_contact': '联系我们',
+                'theme_label': '深色'
             },
             'en': {
                 'nav_home': 'Home',
@@ -226,7 +239,8 @@
                 'card_vvcp_sub': 'VVCP',
                 'footer_home': 'Home',
                 'footer_website': 'Official Website',
-                'footer_contact': 'Contact Us'
+                'footer_contact': 'Contact Us',
+                'theme_label': 'Dark'
             }
         };
 
@@ -241,7 +255,6 @@
                     el.textContent = translations[lang][key];
                 }
             });
-            // 更新 placeholder（如有）
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
                 const key = el.dataset.i18nPlaceholder;
                 if (translations[lang] && translations[lang][key]) {
@@ -250,36 +263,40 @@
             });
         }
 
-        // 載入語言偏好
         const savedLang = localStorage.getItem('cohl_lang') || 'zh-HK';
         switchLang(savedLang);
 
-        // ===== Dark Mode =====
+        // ===== Dark Mode 切換 =====
         (function() {
             const toggle = document.getElementById('themeToggle');
             const icon = document.getElementById('themeIcon');
-            const label = document.getElementById('themeLabel');
             const html = document.documentElement;
 
             const savedTheme = localStorage.getItem('cohl-theme');
             if (savedTheme === 'dark') {
                 html.setAttribute('data-theme', 'dark');
                 icon.textContent = '☀️';
-                label.textContent = '淺色';
+                const label = document.getElementById('themeLabel');
+                if (label) {
+                    const lang = localStorage.getItem('cohl_lang') || 'zh-HK';
+                    label.textContent = translations[lang]['theme_label'] === '深色' ? '淺色' : 'Light';
+                }
             }
 
             toggle.addEventListener('click', function() {
                 const isDark = html.getAttribute('data-theme') === 'dark';
+                const label = document.getElementById('themeLabel');
+                const lang = localStorage.getItem('cohl_lang') || 'zh-HK';
                 if (isDark) {
                     html.removeAttribute('data-theme');
                     localStorage.setItem('cohl-theme', 'light');
                     icon.textContent = '🌙';
-                    label.textContent = '深色';
+                    if (label) label.textContent = translations[lang]['theme_label'];
                 } else {
                     html.setAttribute('data-theme', 'dark');
                     localStorage.setItem('cohl-theme', 'dark');
                     icon.textContent = '☀️';
-                    label.textContent = '淺色';
+                    if (label) label.textContent = translations[lang]['theme_label'] === '深色' ? '淺色' : 'Light';
                 }
             });
         })();

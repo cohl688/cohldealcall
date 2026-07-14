@@ -236,7 +236,20 @@
             document.getElementById('output-sec').style.display = 'block';
             save();
         }
-        function copy(id) { document.getElementById(id).select(); document.execCommand('copy'); alert('✅ 已複製！'); }
+
+        // ===== 複製功能（升級版） =====
+        async function copy(id) {
+            const t = document.getElementById(id);
+            try {
+                await navigator.clipboard.writeText(t.value);
+                alert('✅ 已複製！');
+            } catch (err) {
+                t.select();
+                t.setSelectionRange(0, 99999);
+                document.execCommand('copy');
+                alert('✅ 已複製 (備用方式)');
+            }
+        }
 
         const translations = {
             'zh-HK': {

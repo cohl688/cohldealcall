@@ -215,92 +215,24 @@
 
     <script>
         // ==========================================
-        // IndexedDB - 統一管理（同時建立兩個 Store）
+        // IndexedDB - 統一管理
         // ==========================================
         const DB_NAME = "ColiAppDB";
         const STORE_FLATMIX = "FlatMixStore";
-        const STORE_ROSTER = "RosterStore";
-        const DB_VERSION = 5;  // 升到 5，確保兩個 Store 都被建立
+        const DB_VERSION = 5;
 
         function openDB() {
             return new Promise((resolve, reject) => {
                 const req = indexedDB.open(DB_NAME, DB_VERSION);
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
-                    // 建立 FlatMixStore（如果不存在）
                     if (!db.objectStoreNames.contains(STORE_FLATMIX)) {
                         db.createObjectStore(STORE_FLATMIX, { keyPath: "id" });
                     }
-                    // 建立 RosterStore（如果不存在）- 確保與 hr_management 共用
-                    if (!db.objectStoreNames.contains(STORE_ROSTER)) {
-                        db.createObjectStore(STORE_ROSTER, { keyPath: "id" });
-                    }
                 };
-                req.onsuccess = (e) => {
-                    resolve(e.target.result);
-                };
-                req.onerror = (e) => {
-                    reject(e.target.error);
-                };
+                req.onsuccess = (e) => resolve(e.target.result);
+                req.onerror = (e) => reject(e.target.error);
             });
-        }
-
-        // 檢查數據庫狀態
-        async function checkDBStatus() {
-            const statusEl = document.getElementById('dbStatus');
-            try {
-                const db = await openDB();
-                if (db.objectStoreNames.contains(STORE_FLATMIX)) {
-                    statusEl.textContent = '✅ 數據庫狀態正常 (FlatMixStore 已就緒)';
-                    statusEl.className = 'db-status success';
-                } else {
-                    statusEl.textContent = '⚠️ FlatMixStore 不存在，請點擊「修復數據庫」';
-                    statusEl.className = 'db-status warning';
-                }
-                db.close();
-                return true;
-            } catch (e) {
-                statusEl.textContent = '❌ 數據庫錯誤: ' + e.message;
-                statusEl.className = 'db-status error';
-                return false;
-            }
-        }
-
-        // 修復數據庫（只刪除 FlatMixStore 數據，保留 RosterStore）
-        async function fixDatabase() {
-            if (!confirm("此操作將刪除所有 Flat Mix 數據並重建數據庫，確定繼續嗎？（更表數據不會受影響）")) return;
-            
-            const statusEl = document.getElementById('dbStatus');
-            statusEl.textContent = '⏳ 正在修復數據庫...';
-            statusEl.className = 'db-status warning';
-            
-            try {
-                // 只刪除 FlatMixStore 的數據，不刪除整個數據庫
-                const db = await openDB();
-                if (db.objectStoreNames.contains(STORE_FLATMIX)) {
-                    const tx = db.transaction([STORE_FLATMIX], "readwrite");
-                    tx.objectStore(STORE_FLATMIX).clear();
-                    await new Promise((resolve) => { tx.oncomplete = resolve; });
-                }
-                db.close();
-                
-                flatMixData = [];
-                document.getElementById('flatMixUploadBox').style.display = 'block';
-                document.getElementById('resetFlatMixBtn').style.display = 'none';
-                document.getElementById('flatMixStatus').textContent = '📎 未上傳';
-                document.getElementById('flatMixStatus').className = 'save-status';
-                document.getElementById('flatMixFile').value = '';
-                document.getElementById('flatMixError').style.display = 'none';
-                
-                statusEl.textContent = '✅ Flat Mix 數據已清除！請重新上載';
-                statusEl.className = 'db-status success';
-                alert('✅ Flat Mix 數據已清除！請重新上載 Excel。');
-                
-            } catch (e) {
-                statusEl.textContent = '❌ 修復失敗: ' + e.message;
-                statusEl.className = 'db-status error';
-                alert('❌ 修復失敗，請嘗試清除瀏覽器數據。\n錯誤: ' + e.message);
-            }
         }
 
         async function saveDataToDB(storeName, dataId, data) {
@@ -332,6 +264,61 @@
             } catch(e) {
                 console.error("DB Load Error", e);
                 return null;
+            }
+        }
+
+        async function checkDBStatus() {
+            const statusEl = document.getElementById('dbStatus');
+            try {
+                const db = await openDB();
+                if (db.objectStoreNames.contains(STORE_FLATMIX)) {
+                    statusEl.textContent = '✅ 數據庫狀態正常 (FlatMixStore 已就緒)';
+                    statusEl.className = 'db-status success';
+                } else {
+                    statusEl.textContent = '⚠️ FlatMixStore 不存在，請點擊「修復數據庫」';
+                    statusEl.className = 'db-status warning';
+                }
+                db.close();
+                return true;
+            } catch (e) {
+                statusEl.textContent = '❌ 數據庫錯誤: ' + e.message;
+                statusEl.className = 'db-status error';
+                return false;
+            }
+        }
+
+        async function fixDatabase() {
+            if (!confirm("此操作將刪除所有 Flat Mix 數據並重建數據庫，確定繼續嗎？（更表數據不會受影響）")) return;
+            
+            const statusEl = document.getElementById('dbStatus');
+            statusEl.textContent = '⏳ 正在修復數據庫...';
+            statusEl.className = 'db-status warning';
+            
+            try {
+                const db = await openDB();
+                if (db.objectStoreNames.contains(STORE_FLATMIX)) {
+                    const tx = db.transaction([STORE_FLATMIX], "readwrite");
+                    tx.objectStore(STORE_FLATMIX).clear();
+                    await new Promise((resolve) => { tx.oncomplete = resolve; });
+                }
+                db.close();
+                
+                flatMixData = [];
+                document.getElementById('flatMixUploadBox').style.display = 'block';
+                document.getElementById('resetFlatMixBtn').style.display = 'none';
+                document.getElementById('flatMixStatus').textContent = '📎 未上傳';
+                document.getElementById('flatMixStatus').className = 'save-status';
+                document.getElementById('flatMixFile').value = '';
+                document.getElementById('flatMixError').style.display = 'none';
+                
+                statusEl.textContent = '✅ Flat Mix 數據已清除！請重新上載';
+                statusEl.className = 'db-status success';
+                alert('✅ Flat Mix 數據已清除！請重新上載 Excel。');
+                
+            } catch (e) {
+                statusEl.textContent = '❌ 修復失敗: ' + e.message;
+                statusEl.className = 'db-status error';
+                alert('❌ 修復失敗，請嘗試清除瀏覽器數據。\n錯誤: ' + e.message);
             }
         }
 
@@ -617,15 +604,22 @@
             document.getElementById('filteredTransactions').value = finalText;
         }
 
-        function copyToClipboard(elementId) {
+        // ===== 複製功能 =====
+        async function copyToClipboard(elementId) {
             const t = document.getElementById(elementId);
             if (!t.value || t.value.includes("請先上載") || t.value.includes("過濾後的結果")) {
                 alert("未能複製空內容");
                 return;
             }
-            t.select();
-            t.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(t.value).then(() => alert("✅ 已複製")).catch(() => alert("請手動複製"));
+            try {
+                await navigator.clipboard.writeText(t.value);
+                alert("✅ 已複製");
+            } catch (err) {
+                t.select();
+                t.setSelectionRange(0, 99999);
+                document.execCommand('copy');
+                alert("✅ 已複製 (備用方式)");
+            }
         }
 
         // ==========================================
