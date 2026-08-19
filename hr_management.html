@@ -14,7 +14,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     
     <style>
-        /* 直接嵌入所有 HR 專用樣式，避免受舊版 style.css 緩存影響 */
         .hr-body .hr-container { max-width: 100%; margin: 0 auto; background: var(--cohl-card-bg); padding: 12px; border-radius: 6px; box-shadow: 0 2px 12px var(--cohl-shadow); border-top: 6px solid var(--cohl-red); }
         .hr-body .hr-container h2 { text-align: center; color: var(--cohl-dark); font-size: 1.1rem; margin-top: 0; margin-bottom: 12px; }
         .hr-body .hr-section { margin-bottom: 12px; padding: 10px; background: var(--cohl-editor-bg); border-radius: 4px; border-left: 4px solid var(--cohl-red); }
@@ -40,7 +39,7 @@
         .hr-body .hr-btn-add { background: var(--cohl-editor-bg); color: var(--cohl-muted); border: 1px dashed var(--cohl-border); padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; margin-bottom: 12px; cursor: pointer; }
         .hr-body .hr-action-btn { color: white; border: none; padding: 12px; font-size: 15px; border-radius: 4px; width: 100%; margin-bottom: 12px; font-weight: bold; cursor: pointer; background: var(--cohl-red); }
         .hr-body .hr-action-btn:hover { background: #cc0010; }
-        .hr-body .hr-result-area { height: 200px; background-color: var(--cohl-editor-bg); font-size: 13px; width: 100%; padding: 8px; border: 1px solid var(--cohl-border); border-radius: 4px; color: var(--cohl-dark); }
+        .hr-body .hr-result-area { height: 200px; background-color: var(--cohl-editor-bg); font-size: 13px; width: 100%; padding: 8px; border: 1px solid var(--cohl-border); border-radius: 4px; color: var(--cohl-dark); font-family: monospace; }
         .hr-body .hr-save-badge { float: right; font-size: 0.75em; color: #2da44e; display: none; }
         #hrLogoPreview { max-width: 120px; margin-top: 8px; border: 1px solid var(--cohl-border); border-radius: 4px; display: none; }
         .hr-body .holiday-check { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 6px 10px; background: rgba(230, 0, 18, 0.04); border-radius: 4px; border: 1px solid rgba(230, 0, 18, 0.08); }
@@ -138,7 +137,21 @@
 
         <!-- 灣畔 -->
         <div id="vvTab" class="hr-tab-content active">
-            <div class="hr-section" style="border-left-color: var(--hr-red);">
+            <div class="hr-section" style="border-left-color: var(--cohl-red);">
+                <label>👥 當值名單設定 (系統會自動記憶):</label>
+                <div class="hr-flex-row" style="flex-direction: column; gap: 8px;">
+                    <div>
+                        <span style="font-size: 12px; color: var(--cohl-muted); display: block; margin-bottom: 4px;">銷售團隊 (請輸入英文 First Name，以逗號分隔)</span>
+                        <input type="text" id="vvSalesPool" value="Moon, Joe, Andrew, Ankie, Eric, Stephen, Peter, Feryl" oninput="handleInput('vv')">
+                    </div>
+                    <div>
+                        <span style="font-size: 12px; color: var(--cohl-muted); display: block; margin-bottom: 4px;">實習生 (請輸入英文 First Name，無實習生請直接留空)</span>
+                        <input type="text" id="vvInternPool" value="" oninput="handleInput('vv')" placeholder="留空則自動隱藏實習生行">
+                    </div>
+                </div>
+            </div>
+
+            <div class="hr-section" style="border-left-color: var(--cohl-red);">
                 <label>📅 日期與人數設定:</label>
                 <input type="date" id="vvDutyDate" onchange="handleInput('vv')">
                 <div class="hr-flex-row">
@@ -151,7 +164,8 @@
                     <span class="holiday-hint" id="vvHolidayHint">自動檢測中...</span>
                 </div>
             </div>
-            <div class="hr-section" style="border-left-color: var(--hr-red);">
+            
+            <div class="hr-section" style="border-left-color: var(--cohl-red);">
                 <label>🏠 示範單位設定 <span id="vvSaveBadge" class="hr-save-badge">✅ 已儲存</span></label>
                 <div id="vvFlatsContainer"></div>
                 <button class="hr-btn-add" onclick="addFlat('vv')">+ 新增戶型</button>
@@ -163,7 +177,17 @@
 
         <!-- 雙鑽 -->
         <div id="tvTab" class="hr-tab-content">
-            <div class="hr-section" style="border-left-color: var(--hr-red); background: var(--cohl-editor-bg);">
+            <div class="hr-section" style="border-left-color: var(--cohl-red); background: var(--cohl-editor-bg);">
+                <label>👥 當值名單設定 (系統會自動記憶):</label>
+                <div class="hr-flex-row" style="flex-direction: column; gap: 8px;">
+                    <div>
+                        <span style="font-size: 12px; color: var(--cohl-muted); display: block; margin-bottom: 4px;">銷售團隊 (請輸入英文 First Name，以逗號分隔)</span>
+                        <input type="text" id="tvSalesPool" value="Moon, Joe, Andrew, Ankie, Eric, Stephen, Peter, Feryl" oninput="handleInput('tv')">
+                    </div>
+                </div>
+            </div>
+
+            <div class="hr-section" style="border-left-color: var(--cohl-red); background: var(--cohl-editor-bg);">
                 <label>📅 日期與人數設定:</label>
                 <input type="date" id="tvDutyDate" onchange="handleInput('tv')">
                 <div class="hr-flex-row">
@@ -176,7 +200,8 @@
                     <span class="holiday-hint" id="tvHolidayHint">自動檢測中...</span>
                 </div>
             </div>
-            <div class="hr-section" style="border-left-color: var(--hr-red); background: var(--cohl-editor-bg);">
+            
+            <div class="hr-section" style="border-left-color: var(--cohl-red); background: var(--cohl-editor-bg);">
                 <label style="color: #8b6508;">🏠 示範單位設定 <span id="tvSaveBadge" class="hr-save-badge">✅ 已儲存</span></label>
                 <div id="tvFlatsContainer"></div>
                 <button class="hr-btn-add" onclick="addFlat('tv')">+ 新增戶型</button>
@@ -188,12 +213,12 @@
 
         <!-- HR -->
         <div id="hrTab" class="hr-tab-content">
-            <div class="hr-section" style="border-left-color: var(--hr-red);">
+            <div class="hr-section" style="border-left-color: var(--cohl-red);">
                 <label>🖼️ 設定公司 Logo (只需上載一次):</label>
                 <input type="file" id="logoUpload" accept="image/png, image/jpeg">
                 <img id="hrLogoPreview" alt="Logo預覽">
             </div>
-            <div class="hr-section" style="border-left-color: var(--hr-red);">
+            <div class="hr-section" style="border-left-color: var(--cohl-red);">
                 <label>👤 選擇員工 (由 PDF 自動讀取):</label>
                 <select id="hrEmployeeSelect" onchange="loadEmployeeData()">
                     <option value="">-- 請先上載 PDF --</option>
@@ -298,13 +323,8 @@
             ['Eric Chan', '(EC)', 'TV / VV', '▲', 'K', 'K', 'VV', 'VV', '▲', 'VV', '▲', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'FL', 'FL', '▲', 'VV', 'VV', 'VV', 'VV', 'VV', '▲', 'VV', '▲', '▲', 'VV', 'VV'],
             ['Stephen Chan', '(SC)', 'TV / VV', '▲', '▲', 'TV', 'TV', 'VV', 'VV', 'TV', '▲', '▲', 'TV', 'TV', 'TV', 'TV', 'VV', '▲', 'TV', 'TV', '▲', 'VV', '▲', '▲', 'TV', 'TV', 'VV', 'TV', '▲', 'VV', 'VV', 'TV', 'TV', 'TV'],
             ['Peter Hung', '(PH)', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', 'VV'],
-            ['Sammi Cheung', '(SC)', 'VV', 'VV', 'VV', '▲', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'VV', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', 'NPL', '▲', 'VV', 'VV', '▲', 'VV', 'VV', 'VV'],
-            ['Renne Lai', '(RL)', 'VV', '▲', '▲', 'VV', '★', 'VV', '▲', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', '', '', '', '', '', '', ''],
-            ['Karina Lau', '(KL)', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', '▲', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', '▲', 'VV', 'VV', '▲', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', '▲', 'VV', 'VV']
+            ['Feryl Lam', '(FL)', 'TV / VV', 'VV', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'VV', 'VV', 'VV', '▲', '▲', 'VV', 'VV', 'VV', 'VV', 'VV', 'VV', 'VV', '▲']
         ];
-
-        const salesPool = ["Moon", "Joe", "Andrew", "Ankie", "Eric", "Stephen", "Peter"];
-        const internPool = ["Sammi", "Karina", "Renne"];
 
         let rosterData = builtInRoster.slice();
         let rosterYear = "2026", rosterMonth = "7", daysInMonth = 31;
@@ -315,12 +335,10 @@
         const EXACT_LEAVE_TYPES = { 'FL':'喪假', 'Q':'居家隔離', 'ML':'產假', 'PL':'侍產假', 'M':'婚假', 'BL':'生日假', 'CL':'關懷假', 'VL':'義工補假', 'V':'疫苗假', 'WFH':'在家工作', 'JSL':'陪審員假', 'EL':'額外假期', 'SL':'進修假', 'NPL':'無薪假', '/':'半天假' };
         const SYMBOL_LEAVE_TYPES = { '▲':'例假', '✽':'補假', '●':'超時工作補假', '★':'病假', '■':'年假', '◎':'事假' };
 
-        const defaultVVFlats = [ { label: "1房", value: "T1A-17C" }, { label: "2房（開廚）", value: "T1A-17D, T1A-17E, T1B-17B" }, { label: "2房（梗廚）", value: "T1C-17G" }, { label: "2房+儲物房（梗廚）", value: "T1B-17A, T2A-17A, T2B-17J, T2A-17J" }, { label: "3房1套（開廚）", value: "T5B-17B" }, { label: "3房1套+工作間連洗手間", value: "*T1A-17A, T1A-17B, T5B-17A" } ];
+        const defaultVVFlats = [ { label: "1房", value: "T1A-17C" }, { label: "2房（開廚）", value: "T1A-17D, T1A-17E, T1B-17B" }, { label: "2房（梗廚）", value: "T1C-17G" }, { label: "2房+儲物房（梗廚）", value: "T1B-17A, T2A-17A, T2B-17J, T2A-17J" }, { label: "3房1套（開廚）", value: "T5B-17B" }, { label: "3房1套連儲物室（開廚）", value: "T5B-17D" }, { label: "3房1套+工作間連洗手間", value: "*T1A-17A, T1A-17B, #T5B-17A" } ];
         const defaultTVFlats = [ { label: "開放式", value: "T2A-21C" }, { label: "2房開廚", value: "T1A-21F, T2A-21A, T2B-21D" }, { label: "2房梗廚", value: "T1B-21H, T2A-21G, T2B-21E" }, { label: "3房1套(儲)", value: "#T2B-21G" }, { label: "3房1套(連工人套)", value: "*T2B-21F" } ];
 
-        // ==========================================
-        // 全新升級：X 坐標對齊 PDF 解析引擎 (防空白格移位)
-        // ==========================================
+        // 全新升級：2D 智能網格定位引擎 (解決字體微小高低位移導致遺漏的問題)
         async function parsePDF(pdfData) {
             const statusEl = document.getElementById('pdfStatus');
             statusEl.className = 'pdf-parse-status info';
@@ -336,124 +354,123 @@
                     const viewport = page.getViewport({ scale: 1 });
                     const textContent = await page.getTextContent();
                     for (let item of textContent.items) {
-                        if(item.str.trim() === '') continue;
+                        let text = item.str.trim();
+                        if(text === '') continue;
                         allTextItems.push({
-                            text: item.str.trim(),
+                            text: text,
                             x: item.transform[4],
-                            y: viewport.height - item.transform[5],
+                            y: viewport.height - item.transform[5]
                         });
                     }
                 }
 
-                // 根據 Y 坐標分行
-                allTextItems.sort((a, b) => a.y - b.y || a.x - b.x);
-                const lines = [];
-                let currentLine = [];
-                let currentY = null;
-                const Y_THRESHOLD = 5;
-
+                // 1. 定位日期行 (尋找 1, 15, 31 同一水平線)
+                let dateY = -1;
                 for (let item of allTextItems) {
-                    if (currentY === null || Math.abs(item.y - currentY) < Y_THRESHOLD) {
-                        currentLine.push(item);
-                        currentY = item.y;
-                    } else {
-                        if (currentLine.length > 0) lines.push(currentLine);
-                        currentLine = [item];
-                        currentY = item.y;
-                    }
-                }
-                if (currentLine.length > 0) lines.push(currentLine);
-
-                let dateXCoords = [];
-                let startRow = -1;
-
-                for (let i = 0; i < lines.length; i++) {
-                    let line = lines[i];
-                    let texts = line.map(it => it.text);
-                    
-                    if (texts.includes('1') && texts.includes('15') && (texts.includes('30') || texts.includes('31'))) {
-                        for (let d = 1; d <= 31; d++) {
-                            let dItem = line.find(it => it.text === String(d));
-                            if (dItem) dateXCoords.push({ day: d, x: dItem.x });
+                    if (item.text === '15') {
+                        let has1 = allTextItems.find(t => t.text === '1' && Math.abs(t.y - item.y) < 10);
+                        let has31 = allTextItems.find(t => (t.text === '30' || t.text === '31') && Math.abs(t.y - item.y) < 10);
+                        if (has1 && has31) {
+                            dateY = item.y;
+                            break;
                         }
                     }
-                    if (startRow === -1 && texts.some(t => t.includes('(') || t.includes('（'))) {
-                        if (!texts.join('').includes('星期')) startRow = i;
+                }
+                if (dateY === -1) throw new Error("無法定位日期標題列，請確保上載正確的更表PDF。");
+
+                let dateXCoords = [];
+                for (let d = 1; d <= 31; d++) {
+                    let dItems = allTextItems.filter(t => t.text === String(d) && Math.abs(t.y - dateY) < 15);
+                    if (dItems.length > 0) {
+                        dItems.sort((a,b) => Math.abs(a.y - dateY) - Math.abs(b.y - dateY));
+                        dateXCoords.push({ day: d, x: dItems[0].x });
+                    }
+                }
+                dateXCoords.sort((a, b) => a.x - b.x);
+                let firstDateX = dateXCoords[0].x;
+
+                // 2. 獲取員工名稱清單 (建立 Y 軸防護網)
+                let employeeAnchors = [];
+                const excludeKeywords = ['售樓處', '值勤', '星期', '姓名', '時間', 'pm', 'am', '公司', '現樓', '當值', '早更', '剪報'];
+                
+                for (let item of allTextItems) {
+                    if (item.x < firstDateX - 15) { 
+                        if (item.text.includes('(') || item.text.includes('（')) {
+                            if (!excludeKeywords.some(kw => item.text.includes(kw))) {
+                                if (item.x < 150) { 
+                                    let preceding = allTextItems.find(t => Math.abs(t.y - item.y) < 5 && t.x < item.x && t.x > item.x - 80);
+                                    let fullName = preceding ? preceding.text + ' ' + item.text : item.text;
+                                    
+                                    if (!employeeAnchors.some(e => Math.abs(e.y - item.y) < 10)) {
+                                        employeeAnchors.push({ name: fullName, y: item.y, shifts: new Array(31).fill('') });
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
-                if (startRow === -1 || dateXCoords.length === 0) {
-                    throw new Error("無法辨識員工數據或日期標題(X坐標)");
+                // 3. 利用 2D 網格將資料完美歸位 (解決 Feryl Lam 字體位移漏件問題)
+                for (let item of allTextItems) {
+                    if (item.x >= firstDateX - 15) {
+                        let closestDay = -1;
+                        let minXDiff = Infinity;
+                        for (let dx of dateXCoords) {
+                            let diff = Math.abs(item.x - dx.x);
+                            if (diff < minXDiff) {
+                                minXDiff = diff;
+                                closestDay = dx.day;
+                            }
+                        }
+                        
+                        if (closestDay !== -1 && minXDiff <= 25) { 
+                            let closestEmp = null;
+                            let minYDiff = Infinity;
+                            for (let emp of employeeAnchors) {
+                                let diff = Math.abs(item.y - emp.y);
+                                if (diff < minYDiff) {
+                                    minYDiff = diff;
+                                    closestEmp = emp;
+                                }
+                            }
+                            
+                            // Y軸容許 12 誤差，保證無論上下點飄都咬得死
+                            if (closestEmp && minYDiff <= 12) {
+                                if (closestEmp.shifts[closestDay - 1]) {
+                                    closestEmp.shifts[closestDay - 1] += ' ' + item.text;
+                                } else {
+                                    closestEmp.shifts[closestDay - 1] = item.text;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                let pdfYear = "2026", pdfMonth = "8";
+                for (let item of allTextItems) {
+                    let match = item.text.match(/(\d{4})年(\d{1,2})月份/);
+                    if (match) { pdfYear = match[1]; pdfMonth = match[2]; break; }
                 }
 
                 const newRoster = [];
-                newRoster.push(['售樓處員工值勤表(自動對齊版)']);
-                newRoster.push(['2026年7月份']);
+                newRoster.push(['售樓處員工值勤表(2D智能定位版)']);
+                newRoster.push([`${pdfYear}年${pdfMonth}月份`]);
                 const dateRow = ['值勤地點'];
                 for (let d = 1; d <= 31; d++) dateRow.push(String(d));
                 newRoster.push(dateRow);
                 newRoster.push(['星期', ...new Array(31).fill('')]);
                 newRoster.push(['姓名', ...new Array(31).fill('')]);
 
-                const excludeKeywords = ['售樓處', '值勤地點', '星期', '姓名', '時間', 'pm', 'am', '公司', '現樓', '當值', '九龍灣早更'];
-
-                for (let i = startRow; i < lines.length; i++) {
-                    let line = lines[i];
-                    line.sort((a, b) => a.x - b.x); 
-                    let texts = line.map(it => it.text);
-                    
-                    let fullName = '';
-                    let nameItemCount = 1;
-
-                    if (texts.length > 0 && (texts[0].includes('(') || texts[0].includes('（'))) {
-                        fullName = texts[0];
-                    } else if (texts.length > 1 && (texts[1].includes('(') || texts[1].includes('（'))) {
-                        fullName = texts[0] + ' ' + texts[1];
-                        nameItemCount = 2;
-                    } else {
-                        continue; 
-                    }
-
-                    let isExcluded = excludeKeywords.some(kw => fullName.includes(kw));
-                    if (isExcluded) continue;
-
-                    let dayData = new Array(31).fill('');
-                    
-                    for (let j = nameItemCount; j < line.length; j++) {
-                        let item = line[j];
-                        if (item.x < dateXCoords[0].x - 12) continue; 
-                        
-                        let closestDay = -1;
-                        let minDiff = Infinity;
-                        for (let k = 0; k < dateXCoords.length; k++) {
-                            let diff = Math.abs(item.x - dateXCoords[k].x);
-                            if (diff < minDiff) {
-                                minDiff = diff;
-                                closestDay = dateXCoords[k].day;
-                            }
-                        }
-
-                        if (closestDay !== -1 && minDiff <= 16) {
-                            if (dayData[closestDay - 1]) dayData[closestDay - 1] += ' ' + item.text;
-                            else dayData[closestDay - 1] = item.text;
-                        }
-                    }
-
-                    const newRow = [fullName, '', '', ...dayData];
-                    newRoster.push(newRow);
-                }
+                for (let emp of employeeAnchors) { newRoster.push([emp.name, '', '', ...emp.shifts]); }
 
                 rosterData = newRoster;
-                const monthMatch = rosterData[1] && rosterData[1][0] ? rosterData[1][0].match(/(\d{4})年(\d{1,2})月份/) : null;
-                if (monthMatch) {
-                    rosterYear = monthMatch[1]; rosterMonth = monthMatch[2];
-                    daysInMonth = new Date(parseInt(rosterYear), parseInt(rosterMonth), 0).getDate();
-                }
+                rosterYear = pdfYear; rosterMonth = pdfMonth;
+                daysInMonth = new Date(parseInt(rosterYear), parseInt(rosterMonth), 0).getDate();
 
                 await saveRosterToDB(rosterData);
 
                 statusEl.className = 'pdf-parse-status success';
-                statusEl.textContent = `✅ PDF 解析成功！共載入 ${newRoster.length - 5} 位員工數據。`;
+                statusEl.textContent = `✅ PDF 解析成功！共載入 ${employeeAnchors.length} 位員工數據。`;
                 document.getElementById('uploadStatus').innerText = `✅ 已從 PDF 載入更表數據 (${rosterYear}年${rosterMonth}月份)`;
                 document.getElementById('uploadStatus').style.color = "#28a745";
                 
@@ -469,9 +486,6 @@
             }
         }
 
-        // ==========================================
-        // UI 及按鈕邏輯
-        // ==========================================
         function triggerPDFUpload() { document.getElementById('pdfFile').click(); }
         document.getElementById('pdfFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -550,16 +564,27 @@
         function loadSettings() {
             savedLogoBase64 = localStorage.getItem('hr_logo_base64');
             if(savedLogoBase64) { document.getElementById('hrLogoPreview').src = savedLogoBase64; document.getElementById('hrLogoPreview').style.display = 'block'; }
+            
+            if (document.getElementById('vvSalesPool')) {
+                document.getElementById('vvSalesPool').value = localStorage.getItem('vv_sales_pool') || "Moon, Joe, Andrew, Ankie, Eric, Stephen, Peter, Feryl";
+                document.getElementById('vvInternPool').value = localStorage.getItem('vv_intern_pool') || "";
+            }
+            if (document.getElementById('tvSalesPool')) {
+                document.getElementById('tvSalesPool').value = localStorage.getItem('tv_sales_pool') || "Moon, Joe, Andrew, Ankie, Eric, Stephen, Peter, Feryl";
+            }
+
             document.getElementById('vvWeekdayAmb').value = localStorage.getItem('vv_wk_amb_v15') || "15"; 
             document.getElementById('vvHolidayAmb').value = localStorage.getItem('vv_hol_amb_v15') || "16";
             document.getElementById('vvManualHoliday').checked = localStorage.getItem('vv_manual_holiday') === 'true';
-            document.getElementById('tvManualHoliday').checked = localStorage.getItem('tv_manual_holiday') === 'true';
             vvFlats = JSON.parse(localStorage.getItem('vv_flats_v15')) || JSON.parse(JSON.stringify(defaultVVFlats)); 
             document.getElementById('vv_remarks').value = localStorage.getItem('vv_remarks_v15') || "#為已裝飾無改動示範單位\n*為已裝飾有改動示範單位\n\n示位單位狀況大致良好，均達開放標準。";
+            
             document.getElementById('tvWeekdayAmb').value = localStorage.getItem('tv_wk_amb_v15') || "3"; 
             document.getElementById('tvHolidayAmb').value = localStorage.getItem('tv_hol_amb_v15') || "4";
+            document.getElementById('tvManualHoliday').checked = localStorage.getItem('tv_manual_holiday') === 'true';
             tvFlats = JSON.parse(localStorage.getItem('tv_flats_v15')) || JSON.parse(JSON.stringify(defaultTVFlats)); 
             document.getElementById('tv_remarks').value = localStorage.getItem('tv_remarks_v15') || "#為已裝飾無改動示範單位\n*為已裝飾有改動示範單位\n\n示位單位狀況大致良好，均達開放標準。";
+            
             renderFlats('vv'); renderFlats('tv');
             setTimeout(() => { updateHolidayHint('vv'); updateHolidayHint('tv'); }, 100);
         }
@@ -612,11 +637,14 @@
         
         function saveSettings(type) {
             if (type === 'vv') { 
+                localStorage.setItem('vv_sales_pool', document.getElementById('vvSalesPool').value);
+                localStorage.setItem('vv_intern_pool', document.getElementById('vvInternPool').value);
                 localStorage.setItem('vv_flats_v15', JSON.stringify(vvFlats)); 
                 localStorage.setItem('vv_remarks_v15', document.getElementById('vv_remarks').value); 
                 localStorage.setItem('vv_wk_amb_v15', document.getElementById('vvWeekdayAmb').value); 
                 localStorage.setItem('vv_hol_amb_v15', document.getElementById('vvHolidayAmb').value); 
             } else { 
+                localStorage.setItem('tv_sales_pool', document.getElementById('tvSalesPool').value);
                 localStorage.setItem('tv_flats_v15', JSON.stringify(tvFlats)); 
                 localStorage.setItem('tv_remarks_v15', document.getElementById('tv_remarks').value); 
                 localStorage.setItem('tv_wk_amb_v15', document.getElementById('tvWeekdayAmb').value); 
@@ -626,6 +654,9 @@
             badge.style.display = 'inline'; setTimeout(() => { badge.style.display = 'none'; }, 2000);
         }
 
+        // ===============================================
+        // 智能 WhatsApp Message 生成器 (根據你的完美排版)
+        // ===============================================
         function generateMessage(type) {
             const isVV = type === 'vv';
             const dateInput = document.getElementById(`${type}DutyDate`).value;
@@ -639,6 +670,11 @@
             
             const customWkAmb = document.getElementById(`${type}WeekdayAmb`).value || (isVV ? "15" : "3");
             const customHolAmb = document.getElementById(`${type}HolidayAmb`).value || (isVV ? "16" : "4");
+            
+            const salesStr = document.getElementById(`${type}SalesPool`) ? document.getElementById(`${type}SalesPool`).value : "";
+            const internStr = document.getElementById(`${type}InternPool`) ? document.getElementById(`${type}InternPool`).value : "";
+            const salesList = salesStr.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+            const internList = internStr.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
             
             let isHolidayDay = false;
             const manualCheckbox = document.getElementById(`${type}ManualHoliday`);
@@ -656,17 +692,18 @@
                     let row = rosterData[i];
                     if (!row || !row[0]) continue;
                     let fullName = String(row[0]).trim();
-                    let firstName = fullName.split(' ')[0].split('(')[0].split('（')[0] || '';
+                    let firstName = fullName.split(' ')[0].split('(')[0].split('（')[0].trim() || '';
                     if (!firstName || firstName === '姓名' || firstName === '星期' || firstName === '值勤地點') continue;
                     
                     if (targetCol >= row.length) continue;
                     let shiftValue = String(row[targetCol] || "").trim().toUpperCase();
+                    let fnLower = firstName.toLowerCase();
                     
                     if (isVV && (shiftValue.includes('VV') || shiftValue.includes('VW'))) {
-                        if (salesPool.includes(firstName) && !salesToday.includes(firstName)) salesToday.push(firstName);
-                        if (internPool.includes(firstName) && !internToday.includes(firstName)) internToday.push(firstName);
+                        if (salesList.includes(fnLower) && !salesToday.includes(firstName)) salesToday.push(firstName);
+                        if (internList.includes(fnLower) && !internToday.includes(firstName)) internToday.push(firstName);
                     } else if (!isVV && shiftValue.includes('TV')) {
-                        if (salesPool.includes(firstName) && !salesToday.includes(firstName)) salesToday.push(firstName);
+                        if (salesList.includes(fnLower) && !salesToday.includes(firstName)) salesToday.push(firstName);
                     }
                 }
             }
@@ -675,22 +712,27 @@
             const flatsArr = isVV ? vvFlats : tvFlats;
             flatsArr.forEach(flat => { if (flat.label.trim() && flat.value.trim()) showflatText += `${flat.label}：${flat.value}\n`; });
             showflatText += `\n${document.getElementById(`${type}_remarks`).value.trim()}`;
+            
             const projName = isVV ? "維港‧灣畔現樓" : "維港‧雙鑽現樓";
             const cleanerCount = isVV ? 3 : 1;
-            let msg = `${projName}\n${formattedDate}\n\n⏰當值時間：10:30pm-7:00pm\n\n👤當值人員\n`;
+            
+            // 按照用家要求完美拼合文字
+            let msg = `${projName}\n${formattedDate}\n\n⏰當值時間：10:30am-7:00pm\n\n👤當值人員\n`;
             msg += `銷售 ：${salesToday.length ? salesToday.join(', ') + ' (' + salesToday.length + '人)' : '無 (0人)'}\n`;
-            if (isVV) msg += `實習生：${internToday.length ? internToday.join(', ') + ' (' + internToday.length + '人)' : '無 (0人)'}\n`;
+            
+            // 【優化點】：如果實習生人數為 0，整行消失唔出
+            if (isVV && internToday.length > 0) {
+                msg += `實習生：${internToday.join(', ')} (${internToday.length}人)\n`;
+            }
+            
             msg += `服務大使：${ambassadorCount}人\n清潔：${cleanerCount}人\n\n「開放示範單位」：\n${showflatText}`;
             document.getElementById(`${type}ResultMessage`).value = msg;
         }
         
-        // ==========================================
-        // 過濾員工下拉選單 (去除括號)
-        // ==========================================
         function populateEmployeeDropdown() {
             const select = document.getElementById('hrEmployeeSelect');
             select.innerHTML = '<option value="">-- 請選擇員工 --</option>';
-            const excludeKeywords = ['售樓', '售機', '值勤表', '值勤地點', '星期', '姓名', '員工', '時間', 'pm', 'am', '公司', '現樓', '當值', '九龍灣早更'];
+            const excludeKeywords = ['售樓', '售機', '值勤表', '值勤地點', '星期', '姓名', '員工', '時間', 'pm', 'am', '公司', '現樓', '當值', '早更', '剪報'];
             for (let i = 0; i < rosterData.length; i++) {
                 let row = rosterData[i];
                 if (!row || !row[0]) continue;
@@ -733,9 +775,6 @@
             }));
         }
         
-        // ==========================================
-        // 匯出 Word
-        // ==========================================
         function exportToWord() {
             const select = document.getElementById('hrEmployeeSelect');
             if (!select.value) { alert("請先選擇員工！"); return; }
