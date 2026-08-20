@@ -401,13 +401,12 @@
                         
                         if (isBracketName || isPoolName) {
                             if (!excludeKeywords.some(kw => item.text.includes(kw))) {
-                                if (item.x < 150) { 
-                                    let preceding = allTextItems.find(t => Math.abs(t.y - item.y) < 5 && t.x < item.x && t.x > item.x - 80);
-                                    let fullName = preceding ? preceding.text + ' ' + item.text : item.text;
-                                    
-                                    if (!employeeAnchors.some(e => Math.abs(e.y - item.y) < 10)) {
-                                        employeeAnchors.push({ name: fullName, y: item.y, shifts: new Array(31).fill('') });
-                                    }
+                                // 【修正邏輯】：移除原有的 item.x < 150 限制，避免因名字縮排導致抓取失敗
+                                let preceding = allTextItems.find(t => Math.abs(t.y - item.y) < 5 && t.x < item.x && t.x > item.x - 80);
+                                let fullName = preceding ? preceding.text + ' ' + item.text : item.text;
+                                
+                                if (!employeeAnchors.some(e => Math.abs(e.y - item.y) < 10)) {
+                                    employeeAnchors.push({ name: fullName, y: item.y, shifts: new Array(31).fill('') });
                                 }
                             }
                         }
@@ -438,7 +437,6 @@
                             }
                             
                             if (closestEmp && minYDiff <= 12) {
-                                // 【修正邏輯】：攔截右側統欄位計數據（如 10, 0）寫入陣列
                                 let cleanText = item.text.trim();
                                 if (!/^\d+$/.test(cleanText)) {
                                     if (closestEmp.shifts[closestDay - 1]) {
@@ -702,7 +700,6 @@
                     
                     if (targetCol >= row.length) continue;
                     
-                    // 【修正邏輯】：在此強制剔除被汙染之字串後綴 (如 VV 10 轉為 VV)
                     let shiftValue = String(row[targetCol] || "").trim().toUpperCase();
                     shiftValue = shiftValue.replace(/[\s\d]+$/, '');
 
@@ -800,7 +797,11 @@
             }
             
             htmlContent += `</table><p style="text-align: right; margin-top: 10px; font-weight: bold;">總計時數：${totalHours} 小時</p></body></html>`;
-            const monthWord = "July";
+            
+            // 【修正邏輯】：動態映射英文字串月份，移除硬編碼 "July"
+            const engMonths = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const monthWord = engMonths[parseInt(rosterMonth, 10)] || rosterMonth;
+            
             const safeName = empName.replace(/ /g, '_');
             const fileDownload = document.createElement("a");
             document.body.appendChild(fileDownload);
@@ -812,7 +813,6 @@
 
         function parseShiftToHR(shiftValue) { 
             let val = (shiftValue || "").toString().trim().toUpperCase(); 
-            // 【修正邏輯】：徹底濾除 31日右側字串黏合之純數值及空白
             val = val.replace(/[\s\d]+$/, '');
 
             if (!val) return { time: '--', desc: '--', hours: '--' }; 
