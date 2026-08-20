@@ -338,7 +338,6 @@
         const defaultVVFlats = [ { label: "1房", value: "T1A-17C" }, { label: "2房（開廚）", value: "T1A-17D, T1A-17E, T1B-17B" }, { label: "2房（梗廚）", value: "T1C-17G" }, { label: "2房+儲物房（梗廚）", value: "T1B-17A, T2A-17A, T2B-17J, T2A-17J" }, { label: "3房1套（開廚）", value: "T5B-17B" }, { label: "3房1套連儲物室（開廚）", value: "T5B-17D" }, { label: "3房1套+工作間連洗手間", value: "*T1A-17A, T1A-17B, #T5B-17A" } ];
         const defaultTVFlats = [ { label: "開放式", value: "T2A-21C" }, { label: "2房開廚", value: "T1A-21F, T2A-21A, T2B-21D" }, { label: "2房梗廚", value: "T1B-21H, T2A-21G, T2B-21E" }, { label: "3房1套(儲)", value: "#T2B-21G" }, { label: "3房1套(連工人套)", value: "*T2B-21F" } ];
 
-        // 全新升級：2D 智能網格定位引擎 (解決字體微小高低位移導致遺漏的問題)
         async function parsePDF(pdfData) {
             const statusEl = document.getElementById('pdfStatus');
             statusEl.className = 'pdf-parse-status info';
@@ -364,7 +363,6 @@
                     }
                 }
 
-                // 1. 定位日期行 (尋找 1, 15, 31 同一水平線)
                 let dateY = -1;
                 for (let item of allTextItems) {
                     if (item.text === '15') {
@@ -389,13 +387,19 @@
                 dateXCoords.sort((a, b) => a.x - b.x);
                 let firstDateX = dateXCoords[0].x;
 
-                // 2. 獲取員工名稱清單 (建立 Y 軸防護網)
                 let employeeAnchors = [];
-                const excludeKeywords = ['售樓處', '值勤', '星期', '姓名', '時間', 'pm', 'am', '公司', '現樓', '當值', '早更', '剪報'];
+                const excludeKeywords = ['售樓處', '值勤', '星期', '姓名', '時間', 'pm', 'am', '公司', '現樓', '當值', '早更', '剪報', '月份'];
                 
+                const salesStr = document.getElementById('vvSalesPool') ? document.getElementById('vvSalesPool').value : "";
+                const internStr = document.getElementById('vvInternPool') ? document.getElementById('vvInternPool').value : "";
+                const allPoolNames = [...salesStr.split(','), ...internStr.split(',')].map(s => s.trim().toLowerCase()).filter(Boolean);
+
                 for (let item of allTextItems) {
                     if (item.x < firstDateX - 15) { 
-                        if (item.text.includes('(') || item.text.includes('（')) {
+                        let isBracketName = item.text.includes('(') || item.text.includes('（');
+                        let isPoolName = allPoolNames.some(name => item.text.toLowerCase().includes(name));
+                        
+                        if (isBracketName || isPoolName) {
                             if (!excludeKeywords.some(kw => item.text.includes(kw))) {
                                 if (item.x < 150) { 
                                     let preceding = allTextItems.find(t => Math.abs(t.y - item.y) < 5 && t.x < item.x && t.x > item.x - 80);
@@ -410,7 +414,6 @@
                     }
                 }
 
-                // 3. 利用 2D 網格將資料完美歸位 (解決 Feryl Lam 字體位移漏件問題)
                 for (let item of allTextItems) {
                     if (item.x >= firstDateX - 15) {
                         let closestDay = -1;
@@ -434,12 +437,15 @@
                                 }
                             }
                             
-                            // Y軸容許 12 誤差，保證無論上下點飄都咬得死
                             if (closestEmp && minYDiff <= 12) {
-                                if (closestEmp.shifts[closestDay - 1]) {
-                                    closestEmp.shifts[closestDay - 1] += ' ' + item.text;
-                                } else {
-                                    closestEmp.shifts[closestDay - 1] = item.text;
+                                // 【修正邏輯】：攔截右側統欄位計數據（如 10, 0）寫入陣列
+                                let cleanText = item.text.trim();
+                                if (!/^\d+$/.test(cleanText)) {
+                                    if (closestEmp.shifts[closestDay - 1]) {
+                                        closestEmp.shifts[closestDay - 1] += ' ' + cleanText;
+                                    } else {
+                                        closestEmp.shifts[closestDay - 1] = cleanText;
+                                    }
                                 }
                             }
                         }
@@ -455,13 +461,15 @@
                 const newRoster = [];
                 newRoster.push(['售樓處員工值勤表(2D智能定位版)']);
                 newRoster.push([`${pdfYear}年${pdfMonth}月份`]);
-                const dateRow = ['值勤地點'];
+                const dateRow = ['值勤地點', '']; 
                 for (let d = 1; d <= 31; d++) dateRow.push(String(d));
                 newRoster.push(dateRow);
-                newRoster.push(['星期', ...new Array(31).fill('')]);
-                newRoster.push(['姓名', ...new Array(31).fill('')]);
+                newRoster.push(['星期', '', ...new Array(31).fill('')]);
+                newRoster.push(['姓名', '', ...new Array(31).fill('')]);
 
-                for (let emp of employeeAnchors) { newRoster.push([emp.name, '', '', ...emp.shifts]); }
+                for (let emp of employeeAnchors) { 
+                    newRoster.push([emp.name, '', ...emp.shifts]); 
+                }
 
                 rosterData = newRoster;
                 rosterYear = pdfYear; rosterMonth = pdfMonth;
@@ -654,9 +662,6 @@
             badge.style.display = 'inline'; setTimeout(() => { badge.style.display = 'none'; }, 2000);
         }
 
-        // ===============================================
-        // 智能 WhatsApp Message 生成器 (根據你的完美排版)
-        // ===============================================
         function generateMessage(type) {
             const isVV = type === 'vv';
             const dateInput = document.getElementById(`${type}DutyDate`).value;
@@ -686,7 +691,7 @@
             
             if (rosterData.length > 0) {
                 const startRow = 5;
-                const targetCol = day + 2; 
+                const targetCol = day + 1; 
                 
                 for (let i = startRow; i < rosterData.length; i++) {
                     let row = rosterData[i];
@@ -696,7 +701,11 @@
                     if (!firstName || firstName === '姓名' || firstName === '星期' || firstName === '值勤地點') continue;
                     
                     if (targetCol >= row.length) continue;
+                    
+                    // 【修正邏輯】：在此強制剔除被汙染之字串後綴 (如 VV 10 轉為 VV)
                     let shiftValue = String(row[targetCol] || "").trim().toUpperCase();
+                    shiftValue = shiftValue.replace(/[\s\d]+$/, '');
+
                     let fnLower = firstName.toLowerCase();
                     
                     if (isVV && (shiftValue.includes('VV') || shiftValue.includes('VW'))) {
@@ -712,19 +721,14 @@
             const flatsArr = isVV ? vvFlats : tvFlats;
             flatsArr.forEach(flat => { if (flat.label.trim() && flat.value.trim()) showflatText += `${flat.label}：${flat.value}\n`; });
             showflatText += `\n${document.getElementById(`${type}_remarks`).value.trim()}`;
-            
             const projName = isVV ? "維港‧灣畔現樓" : "維港‧雙鑽現樓";
             const cleanerCount = isVV ? 3 : 1;
             
-            // 按照用家要求完美拼合文字
             let msg = `${projName}\n${formattedDate}\n\n⏰當值時間：10:30am-7:00pm\n\n👤當值人員\n`;
             msg += `銷售 ：${salesToday.length ? salesToday.join(', ') + ' (' + salesToday.length + '人)' : '無 (0人)'}\n`;
-            
-            // 【優化點】：如果實習生人數為 0，整行消失唔出
             if (isVV && internToday.length > 0) {
                 msg += `實習生：${internToday.join(', ')} (${internToday.length}人)\n`;
             }
-            
             msg += `服務大使：${ambassadorCount}人\n清潔：${cleanerCount}人\n\n「開放示範單位」：\n${showflatText}`;
             document.getElementById(`${type}ResultMessage`).value = msg;
         }
@@ -732,19 +736,18 @@
         function populateEmployeeDropdown() {
             const select = document.getElementById('hrEmployeeSelect');
             select.innerHTML = '<option value="">-- 請選擇員工 --</option>';
-            const excludeKeywords = ['售樓', '售機', '值勤表', '值勤地點', '星期', '姓名', '員工', '時間', 'pm', 'am', '公司', '現樓', '當值', '早更', '剪報'];
+            const excludeKeywords = ['售樓', '售機', '值勤表', '值勤地點', '星期', '姓名', '員工', '時間', 'pm', 'am', '公司', '現樓', '當值', '早更', '剪報', '月份'];
             for (let i = 0; i < rosterData.length; i++) {
                 let row = rosterData[i];
                 if (!row || !row[0]) continue;
                 let fullName = String(row[0]).trim();
                 if (!fullName) continue;
                 
-                if (!fullName.includes('(') && !fullName.includes('（')) continue;
                 let isExcluded = excludeKeywords.some(kw => fullName.includes(kw));
-                if (isExcluded) continue;
+                if (isExcluded || fullName.length < 2) continue;
                 
                 let cleanName = fullName.split('(')[0].split('（')[0].trim();
-                if (cleanName) {
+                if (cleanName && cleanName !== '值勤地點' && cleanName !== '星期' && cleanName !== '姓名') {
                     select.innerHTML += `<option value="${i}">${cleanName}</option>`;
                 }
             }
@@ -789,7 +792,7 @@
             let htmlContent = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>body { font-family: 'MingLiU', 'PMingLiU', 'Microsoft JhengHei', sans-serif; font-size: 12pt; } table { width: 100%; border-collapse: collapse; margin-bottom: 10px; } th, td { border: 1px solid black; padding: 6px; text-align: center; } .meta-table td { border: none; text-align: left; padding: 2px; } h2 { text-align: center; font-size: 16pt; margin-bottom: 20px; } .logo-container { text-align: left; margin-bottom: 15px; } </style></head><body><div class="logo-container">${imgHtml}</div><h2>手寫出勤記錄表 ( ${rosterYear} )年(${rosterMonth})月份</h2><table class="meta-table"><tr><td style="width: 25%;">姓名：${empName}</td><td style="width: 25%;">職位：${position}</td><td style="width: 25%;">部門/地盤：營業部</td><td style="width: 25%;">員工編號：${empId}</td></tr></table><table><tr><th style="width: 10%;">日</th><th style="width: 30%;">工作起止時間</th><th style="width: 45%;">工作內容</th><th style="width: 15%;">共計</th></tr>`;
             
             for (let day = 1; day <= daysInMonth; day++) {
-                const colIndex = day + 2; 
+                const colIndex = day + 1; 
                 let shiftVal = (colIndex < rowData.length) ? rowData[colIndex] : '';
                 const parsed = parseShiftToHR(shiftVal);
                 htmlContent += `<tr><td>${day}</td><td>${parsed.time}</td><td>${parsed.desc}</td><td>${parsed.hours === '--' ? '--' : parsed.hours + '小時'}</td></tr>`;
@@ -809,6 +812,9 @@
 
         function parseShiftToHR(shiftValue) { 
             let val = (shiftValue || "").toString().trim().toUpperCase(); 
+            // 【修正邏輯】：徹底濾除 31日右側字串黏合之純數值及空白
+            val = val.replace(/[\s\d]+$/, '');
+
             if (!val) return { time: '--', desc: '--', hours: '--' }; 
             if (EXACT_LEAVE_TYPES[val]) return { time: EXACT_LEAVE_TYPES[val], desc: EXACT_LEAVE_TYPES[val] + '一天', hours: '--' }; 
             for (const [symbol, leaveName] of Object.entries(SYMBOL_LEAVE_TYPES)) { 
