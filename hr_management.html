@@ -388,7 +388,8 @@
                 let firstDateX = dateXCoords[0].x;
 
                 let employeeAnchors = [];
-                const excludeKeywords = ['售樓處', '值勤', '星期', '姓名', '時間', 'pm', 'am', '公司', '現樓', '當值', '早更', '剪報', '月份'];
+                // 【修正】剔除 'am', 'pm'
+                const excludeKeywords = ['售樓處', '值勤', '星期', '姓名', '時間', '公司', '現樓', '當值', '早更', '剪報', '月份'];
                 
                 const salesStr = document.getElementById('vvSalesPool') ? document.getElementById('vvSalesPool').value : "";
                 const internStr = document.getElementById('vvInternPool') ? document.getElementById('vvInternPool').value : "";
@@ -401,7 +402,6 @@
                         
                         if (isBracketName || isPoolName) {
                             if (!excludeKeywords.some(kw => item.text.includes(kw))) {
-                                // 【修正邏輯】：移除原有的 item.x < 150 限制，避免因名字縮排導致抓取失敗
                                 let preceding = allTextItems.find(t => Math.abs(t.y - item.y) < 5 && t.x < item.x && t.x > item.x - 80);
                                 let fullName = preceding ? preceding.text + ' ' + item.text : item.text;
                                 
@@ -733,7 +733,8 @@
         function populateEmployeeDropdown() {
             const select = document.getElementById('hrEmployeeSelect');
             select.innerHTML = '<option value="">-- 請選擇員工 --</option>';
-            const excludeKeywords = ['售樓', '售機', '值勤表', '值勤地點', '星期', '姓名', '員工', '時間', 'pm', 'am', '公司', '現樓', '當值', '早更', '剪報', '月份'];
+            // 【修正】剔除 'am', 'pm'
+            const excludeKeywords = ['售樓', '售機', '值勤表', '值勤地點', '星期', '姓名', '員工', '時間', '公司', '現樓', '當值', '早更', '剪報', '月份'];
             for (let i = 0; i < rosterData.length; i++) {
                 let row = rosterData[i];
                 if (!row || !row[0]) continue;
@@ -798,7 +799,6 @@
             
             htmlContent += `</table><p style="text-align: right; margin-top: 10px; font-weight: bold;">總計時數：${totalHours} 小時</p></body></html>`;
             
-            // 【修正邏輯】：動態映射英文字串月份，移除硬編碼 "July"
             const engMonths = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
             const monthWord = engMonths[parseInt(rosterMonth, 10)] || rosterMonth;
             
